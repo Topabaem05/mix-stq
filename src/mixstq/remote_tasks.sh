@@ -8,6 +8,7 @@ ARC="${MIXSTQ_ARC:-60}"
 LOW_LAYERS="${MIXSTQ_LOW_LAYERS:-6}"
 ARMS="${MIXSTQ_ARMS:-dense,mixed_stq,mixed_ltc}"
 WORKDIR="${MIXSTQ_WORKDIR:-/workspace/mixstq}"
+OUT="${MIXSTQ_OUT:-artifacts/task_accuracy.json}"
 
 echo "[remote] python: $(python3 --version)"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
@@ -27,7 +28,7 @@ python3 eval_tasks.py \
   --arc "$ARC" \
   --low-layers "$LOW_LAYERS" \
   --arms "$ARMS" \
-  --out artifacts/task_accuracy.json
+  --out "$OUT"
 
 echo "[remote] done"
 ls -la artifacts/

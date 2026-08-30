@@ -53,3 +53,23 @@ QK_K = 256
 block_bytes = 2 + (QK_K // 8) * 2
 print("block_iq2_xxs bytes: %d (d=2, qs=%d x uint16)" % (block_bytes, QK_K // 8))
 print("computed bpw from block layout: %.4f" % (block_bytes * 8.0 / QK_K))
+
+
+def unpack(name: str, bytes_per_entry: int) -> list[list[int]]:
+    values = table(name)
+    return [
+        [(packed >> (8 * j)) & 0xFF for j in range(bytes_per_entry)]
+        for packed in values
+    ]
+
+
+tier_payload = {
+    "iq2s_grid": unpack("iq2s_grid", 8),
+    "iq3xxs_grid": unpack("iq3xxs_grid", 4),
+}
+for name, points in tier_payload.items():
+    magnitudes = sorted({v for entry in points for v in entry})
+    print("%s: %d entries x %d values, magnitudes %s" % (
+        name, len(points), len(points[0]), magnitudes))
+Path("tier_tables.json").write_text(json.dumps(tier_payload), encoding="utf-8")
+print("wrote tier_tables.json")

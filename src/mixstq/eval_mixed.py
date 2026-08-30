@@ -166,8 +166,11 @@ def apply_plan(model, importance, plan, device):
                         flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
                     bpw = 1.3125
                 elif tier == "iq2":
-                    quantized, relative = tq.quantize_rows(flat, local)
-                    bpw = 2.0625
+                    quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
+                    bpw = tq.TIERS["iq2_xxs"]["bpw"]
+                elif tier in tq.TIERS:
+                    quantized, relative = tq.quantize_rows(flat, local, tier=tier)
+                    bpw = tq.TIERS[tier]["bpw"]
                 else:
                     raise RuntimeError("unknown tier " + tier)
                 param.data = quantized.reshape(data.shape).to(data.dtype)

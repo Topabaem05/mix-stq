@@ -111,6 +111,47 @@ def run_arm(model, tokenizer, items, device):
     return correct
 
 
+def build_plans(low_layers):
+    low = set(range(low_layers))
+
+    def dense(_layer, _attribute):
+        return "fp16"
+
+    def uniform_iq2(_layer, _attribute):
+        return "iq2"
+
+    def mixed_stq(layer, attribute):
+        if attribute == "down_proj":
+            return "iq2"
+        return "stq" if layer in low else "iq2"
+
+    def mixed_ltc(layer, attribute):
+        if attribute == "down_proj":
+            return "iq2"
+        return "ltc" if layer in low else "iq2"
+
+    def iq2s_all(_layer, _attribute):
+        return "iq2_s"
+
+    def iq3_all(_layer, _attribute):
+        return "iq3_xxs"
+
+    def ltc_iq3(layer, attribute):
+        if attribute == "down_proj":
+            return "iq3_xxs"
+        return "ltc" if layer in low else "iq3_xxs"
+
+    return {
+        "dense": dense,
+        "uniform_iq2": uniform_iq2,
+        "mixed_stq": mixed_stq,
+        "mixed_ltc": mixed_ltc,
+        "iq2s_all": iq2s_all,
+        "iq3_all": iq3_all,
+        "ltc_iq3": ltc_iq3,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="paired task accuracy across quantization arms")
     parser.add_argument("--model", required=True)
@@ -130,22 +171,7 @@ def main() -> int:
     items = load_mmlu(args.mmlu) + load_arc(args.arc)
     print("items: %d (mmlu %d, arc %d)" % (len(items), args.mmlu, args.arc), flush=True)
 
-    low = set(range(args.low_layers))
-
-    def dense(_layer, _attribute):
-        return "fp16"
-
-    def mixed_stq(layer, attribute):
-        if attribute == "down_proj":
-            return "iq2"
-        return "stq" if layer in low else "iq2"
-
-    def mixed_ltc(layer, attribute):
-        if attribute == "down_proj":
-            return "iq2"
-        return "ltc" if layer in low else "iq2"
-
-    plans = {"dense": dense, "mixed_stq": mixed_stq, "mixed_ltc": mixed_ltc}
+    plans = build_plans(args.low_layers)
     selected = [name.strip() for name in args.arms.split(",") if name.strip()]
 
     results = {}

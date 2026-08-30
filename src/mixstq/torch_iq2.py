@@ -7,27 +7,41 @@ from pathlib import Path
 import torch
 
 QK_BLOCK = 256
-LANE = 8
-LANES_PER_BLOCK = QK_BLOCK // LANE
-BLOCK_BYTES = 2 + (QK_BLOCK // 8) * 2
-IQ2XXS_BPW = BLOCK_BYTES * 8.0 / QK_BLOCK
 SUB_LEVELS = 16
 COARSE = (0.7, 0.8, 0.9, 0.95, 1.0, 1.05, 1.1, 1.2, 1.3)
 LANE_CHUNK = 1048576
 
+TIERS = {
+    "iq2_xxs": {"table": "iq2xxs_grid", "lane": 8, "bpw": 2.0625},
+    "iq2_s": {"table": "iq2s_grid", "lane": 8, "bpw": 2.5625},
+    "iq3_xxs": {"table": "iq3xxs_grid", "lane": 4, "bpw": 3.0625},
+}
+LANE = TIERS["iq2_xxs"]["lane"]
+LANES_PER_BLOCK = QK_BLOCK // LANE
+BLOCK_BYTES = 2 + (QK_BLOCK // 8) * 2
+IQ2XXS_BPW = TIERS["iq2_xxs"]["bpw"]
 
-@lru_cache(maxsize=4)
-def grid(device_str: str) -> torch.Tensor:
-    payload = json.loads(
-        (Path(__file__).with_name("iq2xxs_tables.json")).read_text(encoding="utf-8")
-    )
-    return torch.tensor(payload["grid"], dtype=torch.float32, device=torch.device(device_str))
+
+@lru_cache(maxsize=8)
+def grid(device_str: str, tier: str = "iq2_xxs") -> torch.Tensor:
+    table_name = TIERS[tier]["table"]
+    if table_name == "iq2xxs_grid":
+        payload = json.loads(
+            (Path(__file__).with_name("iq2xxs_tables.json")).read_text(encoding="utf-8")
+        )
+        points = payload["grid"]
+    else:
+        payload = json.loads(
+            (Path(__file__).with_name("tier_tables.json")).read_text(encoding="utf-8")
+        )
+        points = payload[table_name]
+    return torch.tensor(points, dtype=torch.float32, device=torch.device(device_str))
 
 
-def _solve_chunk(magnitude, weights, base, table, table_square):
+def _solve_chunk(magnitude, weights, base, table, table_square, lanes_per_block):
     linear = (weights * magnitude) @ table.t()
     quadratic = weights @ table_square.t()
-    lane_base = base.repeat_interleave(LANES_PER_BLOCK, dim=0)
+    lane_base = base.repeat_interleave(lanes_per_block, dim=0)
 
     best_cost = None
     best_index = None
@@ -51,9 +65,11 @@ def _solve_chunk(magnitude, weights, base, table, table_square):
     return best_index, best_step
 
 
-def quantize_rows(matrix, importance):
+def quantize_rows(matrix, importance, tier="iq2_xxs"):
     device = matrix.device
-    table = grid(str(device))
+    lane = TIERS[tier]["lane"]
+    lanes_per_block = QK_BLOCK // lane
+    table = grid(str(device), tier)
     table_square = table.square()
     work = matrix.to(torch.float32)
     rows, width = work.shape
@@ -66,16 +82,17 @@ def quantize_rows(matrix, importance):
     weight_body = channel.reshape(1, usable).expand(rows, usable).reshape(-1, QK_BLOCK)
 
     recon = torch.empty_like(body)
-    block_step = max(LANE_CHUNK // LANES_PER_BLOCK, 1)
+    block_step = max(LANE_CHUNK // lanes_per_block, 1)
     for start in range(0, body.shape[0], block_step):
         block = body[start : start + block_step]
         block_weight = weight_body[start : start + block_step]
-        base = block.abs().amax(dim=1, keepdim=True).clamp_min(1e-12) / 43.0
-        lanes = block.reshape(-1, LANE)
-        lane_weights = block_weight.reshape(-1, LANE)
+        base = block.abs().amax(dim=1, keepdim=True).clamp_min(1e-12) / table.max()
+        lanes = block.reshape(-1, lane)
+        lane_weights = block_weight.reshape(-1, lane)
         signs = torch.where(lanes < 0, -1.0, 1.0)
         magnitude = lanes.abs()
-        index, step = _solve_chunk(magnitude, lane_weights, base, table, table_square)
+        index, step = _solve_chunk(
+            magnitude, lane_weights, base, table, table_square, lanes_per_block)
         recon[start : start + block_step] = (
             table[index] * step.unsqueeze(1) * signs
         ).reshape(block.shape)
@@ -85,4 +102,3 @@ def quantize_rows(matrix, importance):
     out = work.clone()
     out[:, :usable] = recon.reshape(rows, usable)
     return out.to(matrix.dtype), float(total_error / total_energy.clamp_min(1e-30))
-

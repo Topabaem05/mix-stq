@@ -12,6 +12,8 @@ OFFLINE = [
     "test_imatrix_hook.py",
     "test_task_accuracy.py",
     "test_eval_tasks.py",
+    "test_tier_encoders.py",
+    "test_sweep_plans.py",
 ]
 NETWORK = ["test_gguf_roundtrip.py", "test_c_parity.py", "test_vecdot.py"]
 

@@ -14,6 +14,7 @@ TIERS = {
     "iq2_xs": {"table": "iq2xs_grid", "lane": 8, "bpw": 2.3125},
     "iq2_s": {"table": "iq2s_grid", "lane": 8, "bpw": 2.5625},
     "iq3_xxs": {"table": "iq3xxs_grid", "lane": 4, "bpw": 3.0625},
+    "iq3_s": {"table": "iq3s_grid", "lane": 4, "bpw": 3.4375},
 }
 LANE = TIERS["iq2_xxs"]["lane"]
 LANES_PER_BLOCK = QK_BLOCK // LANE

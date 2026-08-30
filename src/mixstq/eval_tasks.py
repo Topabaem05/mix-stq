@@ -139,6 +139,15 @@ def build_plans(low_layers):
     def iq3_all(_layer, _attribute):
         return "iq3_xxs"
 
+    def iq3s_all(_layer, _attribute):
+        return "iq3_s"
+
+    def iq3_low_iq2_high(layer, attribute):
+        return "iq3_xxs" if layer in low else "iq2_xxs"
+
+    def iq2_low_iq3_high(layer, attribute):
+        return "iq2_xxs" if layer in low else "iq3_xxs"
+
     def ltc_iq3(layer, attribute):
         if attribute == "down_proj":
             return "iq3_xxs"
@@ -152,6 +161,9 @@ def build_plans(low_layers):
         "iq2s_all": iq2s_all,
         "iq2xs_all": iq2xs_all,
         "iq3_all": iq3_all,
+        "iq3s_all": iq3s_all,
+        "iq3_low_iq2_high": iq3_low_iq2_high,
+        "iq2_low_iq3_high": iq2_low_iq3_high,
         "ltc_iq3": ltc_iq3,
     }
 

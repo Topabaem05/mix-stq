@@ -67,6 +67,7 @@ tier_payload = {
     "iq2xs_grid": unpack("iq2xs_grid", 8),
     "iq2s_grid": unpack("iq2s_grid", 8),
     "iq3xxs_grid": unpack("iq3xxs_grid", 4),
+    "iq3s_grid": unpack("iq3s_grid", 4),
 }
 for name, points in tier_payload.items():
     magnitudes = sorted({v for entry in points for v in entry})

@@ -14,6 +14,7 @@ OFFLINE = [
     "test_eval_tasks.py",
     "test_tier_encoders.py",
     "test_sweep_plans.py",
+    "test_analytic_scale.py",
 ]
 NETWORK = ["test_gguf_roundtrip.py", "test_c_parity.py", "test_vecdot.py"]
 

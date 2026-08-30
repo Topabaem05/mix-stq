@@ -133,6 +133,9 @@ def build_plans(low_layers):
     def iq2s_all(_layer, _attribute):
         return "iq2_s"
 
+    def iq2xs_all(_layer, _attribute):
+        return "iq2_xs"
+
     def iq3_all(_layer, _attribute):
         return "iq3_xxs"
 
@@ -147,6 +150,7 @@ def build_plans(low_layers):
         "mixed_stq": mixed_stq,
         "mixed_ltc": mixed_ltc,
         "iq2s_all": iq2s_all,
+        "iq2xs_all": iq2xs_all,
         "iq3_all": iq3_all,
         "ltc_iq3": ltc_iq3,
     }

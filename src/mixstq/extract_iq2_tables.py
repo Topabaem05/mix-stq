@@ -64,6 +64,7 @@ def unpack(name: str, bytes_per_entry: int) -> list[list[int]]:
 
 
 tier_payload = {
+    "iq2xs_grid": unpack("iq2xs_grid", 8),
     "iq2s_grid": unpack("iq2s_grid", 8),
     "iq3xxs_grid": unpack("iq3xxs_grid", 4),
 }

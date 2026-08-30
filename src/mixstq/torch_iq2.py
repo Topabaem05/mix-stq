@@ -7,12 +7,11 @@ from pathlib import Path
 import torch
 
 QK_BLOCK = 256
-SUB_LEVELS = 16
-COARSE = (0.7, 0.8, 0.9, 0.95, 1.0, 1.05, 1.1, 1.2, 1.3)
 LANE_CHUNK = 1048576
 
 TIERS = {
     "iq2_xxs": {"table": "iq2xxs_grid", "lane": 8, "bpw": 2.0625},
+    "iq2_xs": {"table": "iq2xs_grid", "lane": 8, "bpw": 2.3125},
     "iq2_s": {"table": "iq2s_grid", "lane": 8, "bpw": 2.5625},
     "iq3_xxs": {"table": "iq3xxs_grid", "lane": 4, "bpw": 3.0625},
 }
@@ -38,31 +37,14 @@ def grid(device_str: str, tier: str = "iq2_xxs") -> torch.Tensor:
     return torch.tensor(points, dtype=torch.float32, device=torch.device(device_str))
 
 
-def _solve_chunk(magnitude, weights, base, table, table_square, lanes_per_block):
-    linear = (weights * magnitude) @ table.t()
-    quadratic = weights @ table_square.t()
-    lane_base = base.repeat_interleave(lanes_per_block, dim=0)
-
-    best_cost = None
-    best_index = None
-    best_step = None
-    for coarse in COARSE:
-        scaled = lane_base * coarse
-        for level in range(SUB_LEVELS):
-            step = scaled * ((level + 0.5) * 0.25)
-            objective = quadratic * step.square() - 2.0 * linear * step
-            index = objective.argmin(dim=1)
-            cost = objective.gather(1, index.unsqueeze(1)).squeeze(1)
-            if best_cost is None:
-                best_cost = cost
-                best_index = index
-                best_step = step.squeeze(1)
-            else:
-                improved = cost < best_cost
-                best_cost = torch.where(improved, cost, best_cost)
-                best_index = torch.where(improved, index, best_index)
-                best_step = torch.where(improved, step.squeeze(1), best_step)
-    return best_index, best_step
+def _solve_chunk(magnitude, weights, table, table_square):
+    linear = ((weights * magnitude) @ table.t()).clamp_min(0.0)
+    quadratic = (weights @ table_square.t()).clamp_min(1e-30)
+    objective = -linear.square() / quadratic
+    index = objective.argmin(dim=1)
+    selected = index.unsqueeze(1)
+    step = (linear.gather(1, selected) / quadratic.gather(1, selected)).squeeze(1)
+    return index, step.clamp_min(0.0)
 
 
 def quantize_rows(matrix, importance, tier="iq2_xxs"):
@@ -86,13 +68,11 @@ def quantize_rows(matrix, importance, tier="iq2_xxs"):
     for start in range(0, body.shape[0], block_step):
         block = body[start : start + block_step]
         block_weight = weight_body[start : start + block_step]
-        base = block.abs().amax(dim=1, keepdim=True).clamp_min(1e-12) / table.max()
         lanes = block.reshape(-1, lane)
         lane_weights = block_weight.reshape(-1, lane)
         signs = torch.where(lanes < 0, -1.0, 1.0)
         magnitude = lanes.abs()
-        index, step = _solve_chunk(
-            magnitude, lane_weights, base, table, table_square, lanes_per_block)
+        index, step = _solve_chunk(magnitude, lane_weights, table, table_square)
         recon[start : start + block_step] = (
             table[index] * step.unsqueeze(1) * signs
         ).reshape(block.shape)

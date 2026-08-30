@@ -7,7 +7,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "mixstq"
 
-OFFLINE = ["test_invariants.py", "test_imatrix_hook.py", "test_task_accuracy.py"]
+OFFLINE = [
+    "test_invariants.py",
+    "test_imatrix_hook.py",
+    "test_task_accuracy.py",
+    "test_eval_tasks.py",
+]
 NETWORK = ["test_gguf_roundtrip.py", "test_c_parity.py", "test_vecdot.py"]
 
 

@@ -1,0 +1,840 @@
+{
+ "baseline": "dense",
+ "items": 200,
+ "arms": {
+  "dense": {
+   "correct": 83,
+   "accuracy": 0.415
+  },
+  "mixed_stq": {
+   "correct": 59,
+   "accuracy": 0.295
+  },
+  "mixed_ltc": {
+   "correct": 59,
+   "accuracy": 0.295
+  }
+ },
+ "comparisons": {
+  "mixed_stq_vs_mixed_ltc": {
+   "only_first_correct": 20,
+   "only_second_correct": 20,
+   "mcnemar_p": 1.0,
+   "accuracy_delta": 0.0,
+   "ci_95": [
+    -0.06,
+    0.060000000000000026
+   ],
+   "significant": false
+  }
+ },
+ "items_detail": [
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  }
+ ],
+ "config": {
+  "model": "allenai/OLMoE-1B-7B-0924",
+  "revision": "6d84c48581ece794365f2b8e9cfb043c68ade9c5",
+  "low_layers": 6,
+  "mmlu": 140,
+  "arc": 60
+ }
+}

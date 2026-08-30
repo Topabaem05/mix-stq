@@ -13,6 +13,16 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 LETTERS = ["A", "B", "C", "D"]
 
 
+def single_token_letters(tokenizer):
+    tokens = []
+    for letter in LETTERS:
+        ids = tokenizer(" " + letter, add_special_tokens=False)["input_ids"]
+        if len(ids) != 1:
+            return None
+        tokens.append(int(ids[0]))
+    return tokens
+
+
 def load_mmlu(limit, subjects=None):
     dataset = load_dataset("cais/mmlu", "all", split="test", streaming=True)
     items = []
@@ -69,6 +79,13 @@ def render(item):
 def score_item(model, tokenizer, item, device):
     prompt = render(item)
     prompt_ids = tokenizer(prompt, return_tensors="pt")["input_ids"].to(device)
+    single = single_token_letters(tokenizer)
+    if single is not None:
+        with torch.no_grad():
+            logits = model(input_ids=prompt_ids).logits[0, -1].float()
+        log_probs = torch.log_softmax(logits, dim=-1)
+        scores = [float(log_probs[token]) for token in single]
+        return int(max(range(len(scores)), key=lambda i: scores[i]))
     scores = []
     with torch.no_grad():
         for letter in LETTERS:
@@ -133,20 +150,42 @@ def main() -> int:
 
     results = {}
     details = {}
+    cache_dir = Path(args.out).parent
     for name in selected:
         if name not in plans:
             raise ValueError("unknown arm " + name)
+        cached = cache_dir / ("correct_%s.json" % name)
+        if cached.is_file():
+            correct = json.loads(cached.read_text(encoding="utf-8"))["correct"]
+            if len(correct) == len(items):
+                results[name] = correct
+                details[name] = {"accuracy": sum(correct) / len(correct), "correct": sum(correct)}
+                print("[arm] %s reused from %s" % (name, cached.name), flush=True)
+                continue
         print("[arm] %s" % name, flush=True)
         model = AutoModelForCausalLM.from_pretrained(
-            args.model, revision=args.revision, torch_dtype=torch.float16
-        ).to(device)
+            args.model,
+            revision=args.revision,
+            dtype=torch.float16,
+            low_cpu_mem_usage=True,
+            device_map={"": device},
+        )
         model.eval()
         if name != "dense":
-            apply_plan(model, importance, plans[name], device)
+            plan_stats = apply_plan(model, importance, plans[name], device)
+            if plan_stats["params"] == 0:
+                raise RuntimeError(
+                    "arm %s quantized nothing: expert modules did not expose fused "
+                    "gate_up_proj/down_proj parameters, so the arm would silently equal dense"
+                    % name
+                )
+            print("  bpw %.4f mean_error %.4f" % (plan_stats["bpw"], plan_stats["mean_error"]),
+                  flush=True)
         correct = run_arm(model, tokenizer, items, device)
         results[name] = correct
         accuracy = sum(correct) / len(correct)
         details[name] = {"accuracy": accuracy, "correct": sum(correct)}
+        cached.write_text(json.dumps({"arm": name, "correct": correct}), encoding="utf-8")
         print("  accuracy %.4f (%d/%d)" % (accuracy, sum(correct), len(correct)), flush=True)
         del model
         if device == "cuda":
@@ -180,4 +219,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

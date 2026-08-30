@@ -16,7 +16,7 @@ mkdir -p "$WORKDIR/artifacts"
 cd "$WORKDIR"
 
 python3 -m pip install -q --upgrade pip
-python3 -m pip install -q "transformers>=4.44,<5" "datasets>=3.0" "accelerate>=1.0"
+python3 -m pip install -q "transformers>=5.0" "datasets>=3.0" "accelerate>=1.0"
 
 echo "[remote] task accuracy for $MODEL @ $REVISION"
 python3 eval_tasks.py \

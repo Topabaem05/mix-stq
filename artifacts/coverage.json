@@ -1,0 +1,35 @@
+{
+ "model_id": "allenai/OLMoE-1B-7B-0924",
+ "revision": "6d84c48581ece794365f2b8e9cfb043c68ade9c5",
+ "observed_tokens": 37274,
+ "domains": [
+  "wiki",
+  "code",
+  "chat"
+ ],
+ "layers_seen": 16,
+ "experts_per_layer": {
+  "0": 64,
+  "1": 64,
+  "10": 64,
+  "11": 64,
+  "12": 64,
+  "13": 64,
+  "14": 64,
+  "15": 64,
+  "2": 64,
+  "3": 64,
+  "4": 64,
+  "5": 64,
+  "6": 64,
+  "7": 64,
+  "8": 64,
+  "9": 64
+ },
+ "expert_pairs": 1024,
+ "minimum_hits_required": 256,
+ "starved_experts": [],
+ "starved_count": 0,
+ "min_hits_observed": 532,
+ "coverage_ok": true
+}

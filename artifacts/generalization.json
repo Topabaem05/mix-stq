@@ -1,0 +1,97 @@
+{
+ "routed expert": {
+  "tensors": 6,
+  "mean_natural_zero": 0.3123321533203125,
+  "min": 0.3087158203125,
+  "max": 0.3154449462890625,
+  "spread_pct_of_mean": 2.154477502564854,
+  "rows": [
+   {
+    "name": "model.layers.0.mlp.experts.0.gate_proj.weight",
+    "numel": 2883584,
+    "natural_zero": 0.31317138671875,
+    "std": 0.01720605231821537,
+    "kurtosis": 3.0239033699035645
+   },
+   {
+    "name": "model.layers.1.mlp.experts.0.gate_proj.weight",
+    "numel": 2883584,
+    "natural_zero": 0.3100128173828125,
+    "std": 0.01629604399204254,
+    "kurtosis": 3.2783212661743164
+   },
+   {
+    "name": "model.layers.2.mlp.experts.0.gate_proj.weight",
+    "numel": 2883584,
+    "natural_zero": 0.3154449462890625,
+    "std": 0.016679054126143456,
+    "kurtosis": 3.461704730987549
+   },
+   {
+    "name": "model.layers.0.mlp.experts.0.up_proj.weight",
+    "numel": 2883584,
+    "natural_zero": 0.31402587890625,
+    "std": 0.01716439612209797,
+    "kurtosis": 3.0431599617004395
+   },
+   {
+    "name": "model.layers.1.mlp.experts.0.up_proj.weight",
+    "numel": 2883584,
+    "natural_zero": 0.3126220703125,
+    "std": 0.015632621943950653,
+    "kurtosis": 3.3609869480133057
+   },
+   {
+    "name": "model.layers.2.mlp.experts.0.up_proj.weight",
+    "numel": 2883584,
+    "natural_zero": 0.3087158203125,
+    "std": 0.015953412279486656,
+    "kurtosis": 3.2713236808776855
+   }
+  ]
+ },
+ "shared expert": {
+  "tensors": 5,
+  "mean_natural_zero": 0.314990234375,
+  "min": 0.312713623046875,
+  "max": 0.3181610107421875,
+  "spread_pct_of_mean": 1.729383041388932,
+  "rows": [
+   {
+    "name": "model.layers.0.mlp.shared_expert.gate_proj.weight",
+    "numel": 11534336,
+    "natural_zero": 0.31573486328125,
+    "std": 0.016817210242152214,
+    "kurtosis": 3.987809419631958
+   },
+   {
+    "name": "model.layers.1.mlp.shared_expert.gate_proj.weight",
+    "numel": 11534336,
+    "natural_zero": 0.31524658203125,
+    "std": 0.017252888530492783,
+    "kurtosis": 3.5279769897460938
+   },
+   {
+    "name": "model.layers.2.mlp.shared_expert.gate_proj.weight",
+    "numel": 11534336,
+    "natural_zero": 0.312713623046875,
+    "std": 0.01676335372030735,
+    "kurtosis": 3.5183327198028564
+   },
+   {
+    "name": "model.layers.0.mlp.shared_expert.up_proj.weight",
+    "numel": 11534336,
+    "natural_zero": 0.3181610107421875,
+    "std": 0.016851607710123062,
+    "kurtosis": 3.6145291328430176
+   },
+   {
+    "name": "model.layers.1.mlp.shared_expert.up_proj.weight",
+    "numel": 11534336,
+    "natural_zero": 0.3130950927734375,
+    "std": 0.016600148752331734,
+    "kurtosis": 3.1684327125549316
+   }
+  ]
+ }
+}

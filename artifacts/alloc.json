@@ -1,0 +1,422 @@
+{
+ "dense": {
+  "nll_per_token": 2.63848992812732,
+  "perplexity": 13.992058753967285,
+  "logit_kl": 0.0,
+  "top1_agreement": 1.0,
+  "margin_ratio": 1.0,
+  "tokens": 3872,
+  "router_topk_jaccard": 1.0
+ },
+ "alloc_best_plan": {
+  "bytes": 1509949440,
+  "params": 6442450944,
+  "mean_error": 0.10188253237077712,
+  "bpw": 1.875
+ },
+ "alloc_best": {
+  "nll_per_token": 3.380258788747236,
+  "perplexity": 29.378374099731445,
+  "logit_kl": 0.787024974822998,
+  "top1_agreement": 0.606404958677686,
+  "margin_ratio": 0.8242557064497843,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 628.8114013671875,
+    "tokens": 183,
+    "agree": 106
+   },
+   {
+    "nll_sum": 613.4795532226562,
+    "tokens": 195,
+    "agree": 123
+   },
+   {
+    "nll_sum": 507.8060302734375,
+    "tokens": 150,
+    "agree": 95
+   },
+   {
+    "nll_sum": 737.060546875,
+    "tokens": 221,
+    "agree": 132
+   },
+   {
+    "nll_sum": 682.3927001953125,
+    "tokens": 208,
+    "agree": 135
+   },
+   {
+    "nll_sum": 880.791015625,
+    "tokens": 253,
+    "agree": 162
+   },
+   {
+    "nll_sum": 320.7173767089844,
+    "tokens": 115,
+    "agree": 66
+   },
+   {
+    "nll_sum": 396.2162780761719,
+    "tokens": 121,
+    "agree": 75
+   },
+   {
+    "nll_sum": 669.69140625,
+    "tokens": 191,
+    "agree": 119
+   },
+   {
+    "nll_sum": 322.4947204589844,
+    "tokens": 98,
+    "agree": 52
+   },
+   {
+    "nll_sum": 449.3753356933594,
+    "tokens": 132,
+    "agree": 79
+   },
+   {
+    "nll_sum": 496.7562255859375,
+    "tokens": 144,
+    "agree": 81
+   },
+   {
+    "nll_sum": 515.726318359375,
+    "tokens": 179,
+    "agree": 119
+   },
+   {
+    "nll_sum": 646.9103393554688,
+    "tokens": 200,
+    "agree": 112
+   },
+   {
+    "nll_sum": 316.14324951171875,
+    "tokens": 99,
+    "agree": 56
+   },
+   {
+    "nll_sum": 594.947509765625,
+    "tokens": 180,
+    "agree": 106
+   },
+   {
+    "nll_sum": 585.3268432617188,
+    "tokens": 188,
+    "agree": 131
+   },
+   {
+    "nll_sum": 627.0556640625,
+    "tokens": 182,
+    "agree": 109
+   },
+   {
+    "nll_sum": 389.30084228515625,
+    "tokens": 111,
+    "agree": 55
+   },
+   {
+    "nll_sum": 427.935546875,
+    "tokens": 107,
+    "agree": 63
+   },
+   {
+    "nll_sum": 976.3610229492188,
+    "tokens": 269,
+    "agree": 166
+   },
+   {
+    "nll_sum": 482.61920166015625,
+    "tokens": 115,
+    "agree": 70
+   },
+   {
+    "nll_sum": 327.4368896484375,
+    "tokens": 94,
+    "agree": 55
+   },
+   {
+    "nll_sum": 493.0060119628906,
+    "tokens": 137,
+    "agree": 81
+   }
+  ],
+  "router_topk_jaccard": 0.7923662715226593
+ },
+ "naive_first_plan": {
+  "bytes": 1509949440,
+  "params": 6442450944,
+  "mean_error": 0.1023458779898673,
+  "bpw": 1.875
+ },
+ "naive_first": {
+  "nll_per_token": 3.408457803332116,
+  "perplexity": 30.218603134155273,
+  "logit_kl": 0.8279798602064451,
+  "top1_agreement": 0.5852272727272727,
+  "margin_ratio": 0.861040050398633,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 569.4925537109375,
+    "tokens": 183,
+    "agree": 108
+   },
+   {
+    "nll_sum": 576.996826171875,
+    "tokens": 195,
+    "agree": 126
+   },
+   {
+    "nll_sum": 500.83349609375,
+    "tokens": 150,
+    "agree": 98
+   },
+   {
+    "nll_sum": 731.6943359375,
+    "tokens": 221,
+    "agree": 121
+   },
+   {
+    "nll_sum": 635.56982421875,
+    "tokens": 208,
+    "agree": 131
+   },
+   {
+    "nll_sum": 896.6385498046875,
+    "tokens": 253,
+    "agree": 138
+   },
+   {
+    "nll_sum": 334.172119140625,
+    "tokens": 115,
+    "agree": 59
+   },
+   {
+    "nll_sum": 385.43011474609375,
+    "tokens": 121,
+    "agree": 82
+   },
+   {
+    "nll_sum": 639.8074340820312,
+    "tokens": 191,
+    "agree": 117
+   },
+   {
+    "nll_sum": 302.087158203125,
+    "tokens": 98,
+    "agree": 55
+   },
+   {
+    "nll_sum": 457.9620666503906,
+    "tokens": 132,
+    "agree": 82
+   },
+   {
+    "nll_sum": 494.6808166503906,
+    "tokens": 144,
+    "agree": 84
+   },
+   {
+    "nll_sum": 549.824951171875,
+    "tokens": 179,
+    "agree": 116
+   },
+   {
+    "nll_sum": 686.480224609375,
+    "tokens": 200,
+    "agree": 115
+   },
+   {
+    "nll_sum": 307.4450378417969,
+    "tokens": 99,
+    "agree": 57
+   },
+   {
+    "nll_sum": 632.1575927734375,
+    "tokens": 180,
+    "agree": 95
+   },
+   {
+    "nll_sum": 620.7186279296875,
+    "tokens": 188,
+    "agree": 126
+   },
+   {
+    "nll_sum": 630.156005859375,
+    "tokens": 182,
+    "agree": 104
+   },
+   {
+    "nll_sum": 388.8553466796875,
+    "tokens": 111,
+    "agree": 56
+   },
+   {
+    "nll_sum": 542.429931640625,
+    "tokens": 107,
+    "agree": 49
+   },
+   {
+    "nll_sum": 988.1754760742188,
+    "tokens": 269,
+    "agree": 150
+   },
+   {
+    "nll_sum": 512.43359375,
+    "tokens": 115,
+    "agree": 56
+   },
+   {
+    "nll_sum": 352.1568603515625,
+    "tokens": 94,
+    "agree": 51
+   },
+   {
+    "nll_sum": 461.34967041015625,
+    "tokens": 137,
+    "agree": 90
+   }
+  ],
+  "router_topk_jaccard": 0.731157006649603
+ },
+ "alloc_worst_plan": {
+  "bytes": 1509949440,
+  "params": 6442450944,
+  "mean_error": 0.10242554105258807,
+  "bpw": 1.875
+ },
+ "alloc_worst": {
+  "nll_per_token": 3.4111589084972036,
+  "perplexity": 30.300336837768555,
+  "logit_kl": 0.7918994650244713,
+  "top1_agreement": 0.5919421487603306,
+  "margin_ratio": 0.8169688623702278,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 620.3650512695312,
+    "tokens": 183,
+    "agree": 108
+   },
+   {
+    "nll_sum": 579.572265625,
+    "tokens": 195,
+    "agree": 127
+   },
+   {
+    "nll_sum": 516.46728515625,
+    "tokens": 150,
+    "agree": 98
+   },
+   {
+    "nll_sum": 750.2512817382812,
+    "tokens": 221,
+    "agree": 129
+   },
+   {
+    "nll_sum": 666.7413940429688,
+    "tokens": 208,
+    "agree": 133
+   },
+   {
+    "nll_sum": 867.1521606445312,
+    "tokens": 253,
+    "agree": 150
+   },
+   {
+    "nll_sum": 335.5933837890625,
+    "tokens": 115,
+    "agree": 65
+   },
+   {
+    "nll_sum": 392.0505065917969,
+    "tokens": 121,
+    "agree": 83
+   },
+   {
+    "nll_sum": 668.5476684570312,
+    "tokens": 191,
+    "agree": 110
+   },
+   {
+    "nll_sum": 318.33819580078125,
+    "tokens": 98,
+    "agree": 48
+   },
+   {
+    "nll_sum": 434.17822265625,
+    "tokens": 132,
+    "agree": 79
+   },
+   {
+    "nll_sum": 492.37640380859375,
+    "tokens": 144,
+    "agree": 89
+   },
+   {
+    "nll_sum": 548.350830078125,
+    "tokens": 179,
+    "agree": 116
+   },
+   {
+    "nll_sum": 674.4666137695312,
+    "tokens": 200,
+    "agree": 103
+   },
+   {
+    "nll_sum": 324.4361267089844,
+    "tokens": 99,
+    "agree": 56
+   },
+   {
+    "nll_sum": 634.1376953125,
+    "tokens": 180,
+    "agree": 98
+   },
+   {
+    "nll_sum": 604.048828125,
+    "tokens": 188,
+    "agree": 123
+   },
+   {
+    "nll_sum": 628.0260009765625,
+    "tokens": 182,
+    "agree": 111
+   },
+   {
+    "nll_sum": 377.25,
+    "tokens": 111,
+    "agree": 56
+   },
+   {
+    "nll_sum": 459.20977783203125,
+    "tokens": 107,
+    "agree": 53
+   },
+   {
+    "nll_sum": 1000.3820190429688,
+    "tokens": 269,
+    "agree": 153
+   },
+   {
+    "nll_sum": 487.4418640136719,
+    "tokens": 115,
+    "agree": 60
+   },
+   {
+    "nll_sum": 338.64813232421875,
+    "tokens": 94,
+    "agree": 57
+   },
+   {
+    "nll_sum": 489.9755859375,
+    "tokens": 137,
+    "agree": 87
+   }
+  ],
+  "router_topk_jaccard": 0.763547573800016
+ }
+}

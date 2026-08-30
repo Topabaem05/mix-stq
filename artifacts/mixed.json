@@ -1,0 +1,56 @@
+{
+ "dense": {
+  "nll_per_token": 2.519808060895358,
+  "perplexity": 12.4262113571167,
+  "logit_kl": 0.0,
+  "top1_agreement": 1.0,
+  "margin_ratio": 1.0,
+  "tokens": 1446,
+  "router_topk_jaccard": 1.0
+ },
+ "uniform_iq2_plan": {
+  "bytes": 1660944384,
+  "params": 6442450944,
+  "mean_error": 0.06551546423408756,
+  "bpw": 2.0625
+ },
+ "uniform_iq2": {
+  "nll_per_token": 3.1130766809233985,
+  "perplexity": 22.49013328552246,
+  "logit_kl": 0.6435577161610126,
+  "top1_agreement": 0.6715076071922544,
+  "margin_ratio": 0.8463695205482298,
+  "tokens": 1446,
+  "router_topk_jaccard": 0.8309869522923469
+ },
+ "mixed_stq_plan": {
+  "bytes": 1509949440,
+  "params": 6442450944,
+  "mean_error": 0.10634184925359806,
+  "bpw": 1.875
+ },
+ "mixed_stq": {
+  "nll_per_token": 3.3404777178625844,
+  "perplexity": 28.23261070251465,
+  "logit_kl": 0.9540310204029083,
+  "top1_agreement": 0.5712309820193637,
+  "margin_ratio": 0.8199890250852533,
+  "tokens": 1446,
+  "router_topk_jaccard": 0.7039314202491445
+ },
+ "mixed_ltc_plan": {
+  "bytes": 1509949440,
+  "params": 6442450944,
+  "mean_error": 0.1023458779898673,
+  "bpw": 1.875
+ },
+ "mixed_ltc": {
+  "nll_per_token": 3.2025088657152274,
+  "perplexity": 24.594158172607422,
+  "logit_kl": 0.8296974897384644,
+  "top1_agreement": 0.5968188105117566,
+  "margin_ratio": 0.8407552160095303,
+  "tokens": 1446,
+  "router_topk_jaccard": 0.731157006649603
+ }
+}

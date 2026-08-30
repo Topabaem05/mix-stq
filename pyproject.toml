@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mixstq"
+version = "0.1.0"
+description = "Learned ternary codebook quantization for GGUF low-bit weights"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+gpu = ["torch>=2.5", "transformers>=4.44", "datasets>=3.0", "accelerate>=1.0"]
+dev = ["pytest>=8.0", "ruff>=0.9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mixstq = ["*.json"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "SIM", "RUF"]
+ignore = ["E501"]

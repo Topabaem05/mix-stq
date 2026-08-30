@@ -1,0 +1,42 @@
+[
+ {
+  "name": "model.language_model.layers.0.mlp.gate_proj.weight",
+  "natural_zero": 0.3116912841796875,
+  "kurtosis": 3.163058042526245
+ },
+ {
+  "name": "model.language_model.layers.0.mlp.up_proj.weight",
+  "natural_zero": 0.31475830078125,
+  "kurtosis": 3.1113173961639404
+ },
+ {
+  "name": "model.language_model.layers.1.mlp.gate_proj.weight",
+  "natural_zero": 0.3108367919921875,
+  "kurtosis": 3.2706668376922607
+ },
+ {
+  "name": "model.language_model.layers.1.mlp.up_proj.weight",
+  "natural_zero": 0.314666748046875,
+  "kurtosis": 3.1195991039276123
+ },
+ {
+  "name": "model.language_model.layers.10.mlp.gate_proj.weight",
+  "natural_zero": 0.3101654052734375,
+  "kurtosis": 3.1519649028778076
+ },
+ {
+  "name": "model.language_model.layers.10.mlp.up_proj.weight",
+  "natural_zero": 0.31298828125,
+  "kurtosis": 3.0720717906951904
+ },
+ {
+  "name": "model.language_model.layers.11.mlp.gate_proj.weight",
+  "natural_zero": 0.308380126953125,
+  "kurtosis": 3.0638089179992676
+ },
+ {
+  "name": "model.language_model.layers.11.mlp.up_proj.weight",
+  "natural_zero": 0.310302734375,
+  "kurtosis": 3.0469627380371094
+ }
+]

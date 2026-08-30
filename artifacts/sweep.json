@@ -1,0 +1,559 @@
+{
+ "dense": {
+  "nll_per_token": 2.63848992812732,
+  "perplexity": 13.992058753967285,
+  "logit_kl": 0.0,
+  "top1_agreement": 1.0,
+  "margin_ratio": 1.0,
+  "tokens": 3872,
+  "router_topk_jaccard": 1.0
+ },
+ "uniform_iq2_plan": {
+  "bytes": 1660944384,
+  "params": 6442450944,
+  "mean_error": 0.06551546423408756,
+  "bpw": 2.0625
+ },
+ "uniform_iq2": {
+  "nll_per_token": 3.2016369685653814,
+  "perplexity": 24.572723388671875,
+  "logit_kl": 0.6020314718286196,
+  "top1_agreement": 0.6652892561983471,
+  "margin_ratio": 0.8909809682575118,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 586.6748657226562,
+    "tokens": 183,
+    "agree": 117
+   },
+   {
+    "nll_sum": 597.4432373046875,
+    "tokens": 195,
+    "agree": 133
+   },
+   {
+    "nll_sum": 510.45184326171875,
+    "tokens": 150,
+    "agree": 107
+   },
+   {
+    "nll_sum": 715.1687622070312,
+    "tokens": 221,
+    "agree": 141
+   },
+   {
+    "nll_sum": 629.4368896484375,
+    "tokens": 208,
+    "agree": 140
+   },
+   {
+    "nll_sum": 813.8953857421875,
+    "tokens": 253,
+    "agree": 172
+   },
+   {
+    "nll_sum": 284.3586730957031,
+    "tokens": 115,
+    "agree": 78
+   },
+   {
+    "nll_sum": 364.0792236328125,
+    "tokens": 121,
+    "agree": 83
+   },
+   {
+    "nll_sum": 618.382080078125,
+    "tokens": 191,
+    "agree": 127
+   },
+   {
+    "nll_sum": 315.87823486328125,
+    "tokens": 98,
+    "agree": 55
+   },
+   {
+    "nll_sum": 418.58575439453125,
+    "tokens": 132,
+    "agree": 91
+   },
+   {
+    "nll_sum": 484.70782470703125,
+    "tokens": 144,
+    "agree": 90
+   },
+   {
+    "nll_sum": 495.84814453125,
+    "tokens": 179,
+    "agree": 135
+   },
+   {
+    "nll_sum": 614.181640625,
+    "tokens": 200,
+    "agree": 122
+   },
+   {
+    "nll_sum": 297.53759765625,
+    "tokens": 99,
+    "agree": 60
+   },
+   {
+    "nll_sum": 565.2557983398438,
+    "tokens": 180,
+    "agree": 125
+   },
+   {
+    "nll_sum": 582.3480224609375,
+    "tokens": 188,
+    "agree": 138
+   },
+   {
+    "nll_sum": 577.90185546875,
+    "tokens": 182,
+    "agree": 121
+   },
+   {
+    "nll_sum": 353.576416015625,
+    "tokens": 111,
+    "agree": 65
+   },
+   {
+    "nll_sum": 420.80059814453125,
+    "tokens": 107,
+    "agree": 61
+   },
+   {
+    "nll_sum": 924.3394775390625,
+    "tokens": 269,
+    "agree": 179
+   },
+   {
+    "nll_sum": 455.9591064453125,
+    "tokens": 115,
+    "agree": 77
+   },
+   {
+    "nll_sum": 319.47027587890625,
+    "tokens": 94,
+    "agree": 62
+   },
+   {
+    "nll_sum": 450.4566345214844,
+    "tokens": 137,
+    "agree": 97
+   }
+  ],
+  "router_topk_jaccard": 0.8309869522923469
+ },
+ "ltc_low3_plan": {
+  "bytes": 1585446912,
+  "params": 6442450944,
+  "mean_error": 0.08392248115083746,
+  "bpw": 1.96875
+ },
+ "ltc_low3": {
+  "nll_per_token": 3.186032783886618,
+  "perplexity": 24.1922607421875,
+  "logit_kl": 0.5846316404640675,
+  "top1_agreement": 0.6508264462809917,
+  "margin_ratio": 0.8796321996671028,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 542.4818725585938,
+    "tokens": 183,
+    "agree": 117
+   },
+   {
+    "nll_sum": 584.976318359375,
+    "tokens": 195,
+    "agree": 127
+   },
+   {
+    "nll_sum": 475.56304931640625,
+    "tokens": 150,
+    "agree": 109
+   },
+   {
+    "nll_sum": 693.6917724609375,
+    "tokens": 221,
+    "agree": 132
+   },
+   {
+    "nll_sum": 631.9325561523438,
+    "tokens": 208,
+    "agree": 135
+   },
+   {
+    "nll_sum": 833.8912963867188,
+    "tokens": 253,
+    "agree": 162
+   },
+   {
+    "nll_sum": 283.26898193359375,
+    "tokens": 115,
+    "agree": 72
+   },
+   {
+    "nll_sum": 373.33709716796875,
+    "tokens": 121,
+    "agree": 81
+   },
+   {
+    "nll_sum": 616.6136474609375,
+    "tokens": 191,
+    "agree": 132
+   },
+   {
+    "nll_sum": 300.08465576171875,
+    "tokens": 98,
+    "agree": 57
+   },
+   {
+    "nll_sum": 420.438720703125,
+    "tokens": 132,
+    "agree": 93
+   },
+   {
+    "nll_sum": 466.09136962890625,
+    "tokens": 144,
+    "agree": 93
+   },
+   {
+    "nll_sum": 510.2336730957031,
+    "tokens": 179,
+    "agree": 127
+   },
+   {
+    "nll_sum": 630.4373779296875,
+    "tokens": 200,
+    "agree": 123
+   },
+   {
+    "nll_sum": 301.56976318359375,
+    "tokens": 99,
+    "agree": 61
+   },
+   {
+    "nll_sum": 575.271240234375,
+    "tokens": 180,
+    "agree": 110
+   },
+   {
+    "nll_sum": 575.9811401367188,
+    "tokens": 188,
+    "agree": 141
+   },
+   {
+    "nll_sum": 578.181640625,
+    "tokens": 182,
+    "agree": 112
+   },
+   {
+    "nll_sum": 358.86614990234375,
+    "tokens": 111,
+    "agree": 66
+   },
+   {
+    "nll_sum": 447.7003173828125,
+    "tokens": 107,
+    "agree": 59
+   },
+   {
+    "nll_sum": 914.7627563476562,
+    "tokens": 269,
+    "agree": 178
+   },
+   {
+    "nll_sum": 471.51763916015625,
+    "tokens": 115,
+    "agree": 72
+   },
+   {
+    "nll_sum": 315.9468994140625,
+    "tokens": 94,
+    "agree": 61
+   },
+   {
+    "nll_sum": 433.47900390625,
+    "tokens": 137,
+    "agree": 100
+   }
+  ],
+  "router_topk_jaccard": 0.7729218783405793
+ },
+ "ltc_low6_plan": {
+  "bytes": 1509949440,
+  "params": 6442450944,
+  "mean_error": 0.1023458779898673,
+  "bpw": 1.875
+ },
+ "ltc_low6": {
+  "nll_per_token": 3.408457803332116,
+  "perplexity": 30.218603134155273,
+  "logit_kl": 0.8279798602064451,
+  "top1_agreement": 0.5852272727272727,
+  "margin_ratio": 0.861040050398633,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 569.4925537109375,
+    "tokens": 183,
+    "agree": 108
+   },
+   {
+    "nll_sum": 576.996826171875,
+    "tokens": 195,
+    "agree": 126
+   },
+   {
+    "nll_sum": 500.83349609375,
+    "tokens": 150,
+    "agree": 98
+   },
+   {
+    "nll_sum": 731.6943359375,
+    "tokens": 221,
+    "agree": 121
+   },
+   {
+    "nll_sum": 635.56982421875,
+    "tokens": 208,
+    "agree": 131
+   },
+   {
+    "nll_sum": 896.6385498046875,
+    "tokens": 253,
+    "agree": 138
+   },
+   {
+    "nll_sum": 334.172119140625,
+    "tokens": 115,
+    "agree": 59
+   },
+   {
+    "nll_sum": 385.43011474609375,
+    "tokens": 121,
+    "agree": 82
+   },
+   {
+    "nll_sum": 639.8074340820312,
+    "tokens": 191,
+    "agree": 117
+   },
+   {
+    "nll_sum": 302.087158203125,
+    "tokens": 98,
+    "agree": 55
+   },
+   {
+    "nll_sum": 457.9620666503906,
+    "tokens": 132,
+    "agree": 82
+   },
+   {
+    "nll_sum": 494.6808166503906,
+    "tokens": 144,
+    "agree": 84
+   },
+   {
+    "nll_sum": 549.824951171875,
+    "tokens": 179,
+    "agree": 116
+   },
+   {
+    "nll_sum": 686.480224609375,
+    "tokens": 200,
+    "agree": 115
+   },
+   {
+    "nll_sum": 307.4450378417969,
+    "tokens": 99,
+    "agree": 57
+   },
+   {
+    "nll_sum": 632.1575927734375,
+    "tokens": 180,
+    "agree": 95
+   },
+   {
+    "nll_sum": 620.7186279296875,
+    "tokens": 188,
+    "agree": 126
+   },
+   {
+    "nll_sum": 630.156005859375,
+    "tokens": 182,
+    "agree": 104
+   },
+   {
+    "nll_sum": 388.8553466796875,
+    "tokens": 111,
+    "agree": 56
+   },
+   {
+    "nll_sum": 542.429931640625,
+    "tokens": 107,
+    "agree": 49
+   },
+   {
+    "nll_sum": 988.1754760742188,
+    "tokens": 269,
+    "agree": 150
+   },
+   {
+    "nll_sum": 512.43359375,
+    "tokens": 115,
+    "agree": 56
+   },
+   {
+    "nll_sum": 352.1568603515625,
+    "tokens": 94,
+    "agree": 51
+   },
+   {
+    "nll_sum": 461.34967041015625,
+    "tokens": 137,
+    "agree": 90
+   }
+  ],
+  "router_topk_jaccard": 0.731157006649603
+ },
+ "ltc_low10_plan": {
+  "bytes": 1409286144,
+  "params": 6442450944,
+  "mean_error": 0.1269736968471388,
+  "bpw": 1.75
+ },
+ "ltc_low10": {
+  "nll_per_token": 3.773460561578924,
+  "perplexity": 43.53044891357422,
+  "logit_kl": 1.1849988202253978,
+  "top1_agreement": 0.48786157024793386,
+  "margin_ratio": 0.7161869184996649,
+  "tokens": 3872,
+  "per_document": [
+   {
+    "nll_sum": 652.730224609375,
+    "tokens": 183,
+    "agree": 96
+   },
+   {
+    "nll_sum": 635.9423217773438,
+    "tokens": 195,
+    "agree": 103
+   },
+   {
+    "nll_sum": 541.536865234375,
+    "tokens": 150,
+    "agree": 85
+   },
+   {
+    "nll_sum": 820.9358520507812,
+    "tokens": 221,
+    "agree": 108
+   },
+   {
+    "nll_sum": 687.0763549804688,
+    "tokens": 208,
+    "agree": 116
+   },
+   {
+    "nll_sum": 960.2178344726562,
+    "tokens": 253,
+    "agree": 119
+   },
+   {
+    "nll_sum": 362.63702392578125,
+    "tokens": 115,
+    "agree": 54
+   },
+   {
+    "nll_sum": 424.493896484375,
+    "tokens": 121,
+    "agree": 72
+   },
+   {
+    "nll_sum": 722.2783203125,
+    "tokens": 191,
+    "agree": 92
+   },
+   {
+    "nll_sum": 349.2001953125,
+    "tokens": 98,
+    "agree": 42
+   },
+   {
+    "nll_sum": 522.0809326171875,
+    "tokens": 132,
+    "agree": 55
+   },
+   {
+    "nll_sum": 546.1452026367188,
+    "tokens": 144,
+    "agree": 58
+   },
+   {
+    "nll_sum": 614.8770751953125,
+    "tokens": 179,
+    "agree": 94
+   },
+   {
+    "nll_sum": 770.5552368164062,
+    "tokens": 200,
+    "agree": 90
+   },
+   {
+    "nll_sum": 346.7645263671875,
+    "tokens": 99,
+    "agree": 48
+   },
+   {
+    "nll_sum": 682.5376586914062,
+    "tokens": 180,
+    "agree": 84
+   },
+   {
+    "nll_sum": 637.65234375,
+    "tokens": 188,
+    "agree": 113
+   },
+   {
+    "nll_sum": 680.2681884765625,
+    "tokens": 182,
+    "agree": 96
+   },
+   {
+    "nll_sum": 419.28857421875,
+    "tokens": 111,
+    "agree": 48
+   },
+   {
+    "nll_sum": 667.59765625,
+    "tokens": 107,
+    "agree": 35
+   },
+   {
+    "nll_sum": 1087.20361328125,
+    "tokens": 269,
+    "agree": 120
+   },
+   {
+    "nll_sum": 562.4326171875,
+    "tokens": 115,
+    "agree": 43
+   },
+   {
+    "nll_sum": 395.99993896484375,
+    "tokens": 94,
+    "agree": 41
+   },
+   {
+    "nll_sum": 520.3868408203125,
+    "tokens": 137,
+    "agree": 77
+   }
+  ],
+  "router_topk_jaccard": 0.6942943584876975
+ }
+}

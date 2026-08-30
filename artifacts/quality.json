@@ -1,0 +1,30 @@
+{
+ "dense": {
+  "nll_per_token": 2.531795794707463,
+  "perplexity": 12.576068878173828,
+  "logit_kl": 0.0,
+  "top1_agreement": 1.0,
+  "margin_ratio": 1.0,
+  "tokens": 2669
+ },
+ "stq_weight_error": 0.27920783290844714,
+ "stq": {
+  "nll_per_token": 9.015825096521988,
+  "perplexity": 8232.337890625,
+  "logit_kl": 6.379998087882996,
+  "top1_agreement": 0.03484451105282878,
+  "margin_ratio": 0.3457265649555123,
+  "tokens": 2669,
+  "router_topk_jaccard": 0.40227412049969075
+ },
+ "ltc_weight_error": 0.2599842240091103,
+ "ltc": {
+  "nll_per_token": 9.18913820737665,
+  "perplexity": 9790.2119140625,
+  "logit_kl": 6.538810461759567,
+  "top1_agreement": 0.04795803671787186,
+  "margin_ratio": 0.30765613054348195,
+  "tokens": 2669,
+  "router_topk_jaccard": 0.4339292623164465
+ }
+}

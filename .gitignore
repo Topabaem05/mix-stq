@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# compiled reference binaries
+ltc_dequant
+ltc_vecdot
+bench_decode
+*.o
+
+# large local data
+*.gguf
+*.safetensors
+*.pt
+artifacts/imatrix.pt
+
+# credentials
+vast_state.json
+.env

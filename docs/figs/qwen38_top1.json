@@ -2,7 +2,7 @@
  "config": {
   "view": {
    "continuousWidth": 460,
-   "continuousHeight": 282,
+   "continuousHeight": 300,
    "stroke": null
   },
   "axisX": {
@@ -24,7 +24,8 @@
    "labelPadding": 7,
    "titleFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
    "titleColor": "#54585a",
-   "titleFontWeight": 400
+   "titleFontWeight": 400,
+   "labelAngle": 0
   },
   "axisY": {
    "labelFontSize": 12.5,
@@ -59,7 +60,7 @@
    "labelColor": "#54585a",
    "titleFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
    "titleColor": "#8b9196",
-   "gradientLength": 154,
+   "gradientLength": 96,
    "title": null,
    "offset": 42.5
   },
@@ -103,14 +104,11 @@
    "title": null
   }
  },
- "width": {
-  "step": 64
- },
+ "width": 460,
  "title": {
-  "text": "Reference IQ3 is 3.5 points below dense FP16",
+  "text": "Reference IQ3 stays within the 2-point BF16 margin",
   "subtitle": [
-   "Qwen3.8-27B, MMLU 140 + ARC-Challenge",
-   "60; approximate IQ arms are not storable"
+   "Qwen3.8-27B, 800 items, MLP only; dense−IQ3 CI upper = +1.75 points"
   ]
  },
  "background": "#ffffff",
@@ -175,8 +173,7 @@
      "scale": {
       "range": [
        "#006ba2",
-       "#3ebcd2",
-       "#ebb434"
+       "#3ebcd2"
       ]
      },
      "legend": {
@@ -198,7 +195,7 @@
     "text": {
      "field": "accuracy",
      "type": "quantitative",
-     "format": ",.1~f"
+     "format": ".3~f"
     },
     "x": {
      "field": "tier",
@@ -227,15 +224,14 @@
      "scale": {
       "range": [
        "#ffffff",
-       "#ffffff",
-       "#121317"
+       "#ffffff"
       ]
      },
      "legend": null
     },
     "opacity": {
      "condition": {
-      "test": "abs(datum[\"accuracy\"]) >= 4.159166666666667",
+      "test": "abs(datum[\"accuracy\"]) >= 4.495",
       "value": 1
      },
      "value": 0
@@ -243,7 +239,7 @@
    },
    "transform": [
     {
-     "calculate": "indexof([\"baseline\",\"not storable\",\"reference\"], datum[\"encoder\"])",
+     "calculate": "indexof([\"BF16 baseline\",\"IQ3 reference\"], datum[\"encoder\"])",
      "as": "__flintStackOrder"
     }
    ]
@@ -264,29 +260,14 @@
  "data": {
   "values": [
    {
-    "tier": "dense FP16",
-    "accuracy": 80.5,
-    "encoder": "baseline"
+    "tier": "dense BF16",
+    "accuracy": 87,
+    "encoder": "BF16 baseline"
    },
    {
-    "tier": "IQ2_XXS approx",
-    "accuracy": 73,
-    "encoder": "not storable"
-   },
-   {
-    "tier": "IQ3_XXS approx",
-    "accuracy": 79,
-    "encoder": "not storable"
-   },
-   {
-    "tier": "IQ3_XXS reference",
-    "accuracy": 77,
-    "encoder": "reference"
-   },
-   {
-    "tier": "IQ3_S approx",
-    "accuracy": 79,
-    "encoder": "not storable"
+    "tier": "IQ3_XXS MLP",
+    "accuracy": 86.625,
+    "encoder": "IQ3 reference"
    }
   ]
  },
@@ -315,6 +296,11 @@
    },
    {
     "stage": "ground",
+    "path": "axes.x.label.angle",
+    "message": "the widest name needs ~71px and the band is 100px — at the house's label size they read straight"
+   },
+   {
+    "stage": "ground",
     "path": "legend.placement",
     "message": "`seriesEnd` not available for this chart — falling through"
    },
@@ -326,7 +312,7 @@
    {
     "stage": "ground",
     "path": "annotation.numberFormat",
-    "message": "printed values use `,.1~f` — three significant figures is what a reader takes off a mark, and it holds the longest label to 4 characters where the raw value runs to 4"
+    "message": "printed values use `.3~f` to preserve the measured value 86.625"
    },
    {
     "stage": "realize",
@@ -351,17 +337,12 @@
    {
     "stage": "realize",
     "path": "legend.gradientLength",
-    "message": "the ramp runs 154px — under half the 342px block, so the key stays a caption to the chart"
+    "message": "the ramp runs 96px — under half the 214px block, so the key stays a caption to the chart"
    },
    {
     "stage": "realize",
     "path": "legend.offset",
     "message": "the top key clears the flat axis title by 24.5px so its last row does not land on the title"
-   },
-   {
-    "stage": "realize",
-    "path": "title.subtitle",
-    "message": "the deck overhangs the 460px block, so it breaks over 2 even lines — the height comes out of the plot, not out of the canvas the caller asked for"
    },
    {
     "stage": "realize",
@@ -472,7 +453,8 @@
       "color": "#54585a",
       "limit": 0,
       "padding": 7,
-      "flush": false
+      "flush": false,
+      "angle": 0
      },
      "title": {
       "show": false,
@@ -535,9 +517,9 @@
      "fontSize": 11.5,
      "color": "#121317"
     },
-    "format": ",.1~f",
-    "insideMinValue": 10.872866666666665,
-    "outsideMaxValue": 69.62713333333333,
+    "format": ".3~f",
+    "insideMinValue": 11.750799999999998,
+    "outsideMaxValue": 75.2492,
     "segmentMinShare": 0.051666666666666666
    },
    "marks": {
@@ -590,7 +572,7 @@
     "padding": 8,
     "density": "compact",
     "plotWidth": 460,
-    "xStep": 64,
+    "xStep": 100,
     "canvasWidth": 460
    },
    "furniture": [
@@ -610,8 +592,8 @@
     "seriesChannel": "color",
     "seriesField": "encoder",
     "categoryField": "tier",
-    "seriesCount": 3,
-    "categoryCount": 5,
+    "seriesCount": 2,
+    "categoryCount": 2,
     "isFaceted": false,
     "isPartToWhole": false,
     "isSigned": false,
@@ -640,6 +622,11 @@
     },
     {
      "stage": "ground",
+     "path": "axes.x.label.angle",
+     "message": "the widest name needs ~71px and the band is 100px — at the house's label size they read straight"
+    },
+    {
+     "stage": "ground",
      "path": "legend.placement",
      "message": "`seriesEnd` not available for this chart — falling through"
     },
@@ -651,7 +638,7 @@
     {
      "stage": "ground",
      "path": "annotation.numberFormat",
-     "message": "printed values use `,.1~f` — three significant figures is what a reader takes off a mark, and it holds the longest label to 4 characters where the raw value runs to 4"
+     "message": "printed values use `.3~f` to preserve the measured value 86.625"
     },
     {
      "stage": "realize",
@@ -676,17 +663,12 @@
     {
      "stage": "realize",
      "path": "legend.gradientLength",
-     "message": "the ramp runs 154px — under half the 342px block, so the key stays a caption to the chart"
+     "message": "the ramp runs 96px — under half the 214px block, so the key stays a caption to the chart"
     },
     {
      "stage": "realize",
      "path": "legend.offset",
      "message": "the top key clears the flat axis title by 24.5px so its last row does not land on the title"
-    },
-    {
-     "stage": "realize",
-     "path": "title.subtitle",
-     "message": "the deck overhangs the 460px block, so it breaks over 2 even lines — the height comes out of the plot, not out of the canvas the caller asked for"
     },
     {
      "stage": "realize",

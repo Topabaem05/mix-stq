@@ -9,24 +9,23 @@ Artifacts and importance matrices: [topabaem/mix-stq-artifacts](https://huggingf
 
 ## Headline result
 
-Qwen3.8-27B, MMLU 140 + ARC-Challenge 60, paired McNemar plus bootstrap CI.
-The measured dense baseline is **FP16**, not the BF16 number on the model card.
+Qwen3.8-27B, BF16, stratified MMLU 570 + ARC-Challenge 230, paired McNemar
+plus a preregistered 10,000-sample bootstrap CI. Only the language-model MLP
+weights are quantized; bpw below is for those 192 covered tensors, not the
+whole model or a GGUF file.
 
-| arm | encoder | bpw | accuracy | vs dense FP16 | p | verdict |
+| arm | encoder | covered MLP bpw | accuracy | vs dense BF16 | p | verdict |
 |---|---|---:|---:|---:|---:|---|
-| dense FP16 | dense | 16 | **0.8050** | baseline | — | — |
-| IQ2_XXS | approximation, not storable | 2.0625 | 0.7300 | −0.0750 | **0.0007** | search result only |
-| IQ3_XXS | approximation, not storable | 3.0625 | 0.7900 | −0.0150 | 0.5078 | optimistic proxy |
-| **IQ3_XXS** | **reference-constrained** | **3.0625** | **0.7700** | **−0.0350** | **0.1185** | **unresolved** |
-| IQ3_S | approximation, not storable | 3.4375 | 0.7900 | −0.0150 | 0.4531 | search result only |
+| dense BF16 | dense | 16 | **0.8700 (696/800)** | baseline | — | — |
+| **IQ3_XXS** | **reference-constrained** | **3.0625** | **0.86625 (693/800)** | **−0.00375** | **0.7111** | **2%p non-inferior** |
 
 ![Qwen3.8-27B Top-1 accuracy by quantization arm](docs/figs/qwen38_top1.svg)
 
-The reference-constrained IQ3_XXS point estimate loses 3.5 percentage points.
-Its paired 95% interval permits a dense advantage from 0.0 to 7.5 points, so
-the run proves neither significant damage nor equivalence. The former claim
-that 3.0625 bpw preserves full accuracy is withdrawn pending an 800+ item,
-dtype-aligned run. See [`mix-stq-v25-reference-iq3.md`](docs/mix-stq-v25-reference-iq3.md).
+The dense-minus-IQ3 estimate is +0.375 percentage points, with paired 95% CI
+[-1.00, +1.75] points. The CI upper bound is below the preregistered +2.00-point
+margin, so the MLP reconstruction passes non-inferiority; it does not yet prove
+GGUF or free-form deployment quality. See
+[`mix-stq-v26-bf16-800-results.md`](docs/mix-stq-v26-bf16-800-results.md).
 
 ## What did not survive measurement
 
@@ -40,7 +39,7 @@ Recorded rather than quietly dropped. Each has a dated research note in `docs/`.
 | Mixing tiers by layer helps | false: what sets accuracy is the *lowest* tier present, not the average bpw |
 | 2.06–2.69 bpw is a plateau | artifact of OLMoE's low baseline; on 27B IQ2_XXS loses significantly |
 | IQ3_S beats dense FP16 | did not reproduce on 27B |
-| IQ3_XXS preserves full accuracy | **unresolved** with the valid encoder: −3.5 points, CI allows up to −7.5 |
+| IQ3_XXS preserves accuracy within 2%p | **supported for the 800-item BF16 MLP-reconstruction gate**; GGUF deployment remains unverified |
 
 The LTC line is closed. A learned 32-entry codebook loses to a fixed 256-entry
 grid by 12.5 points at the same 4-value lane structure, and growing the codebook
@@ -116,13 +115,13 @@ a plausible-looking null result.
 - **No GGUF checkpoint exists.** Accuracy is measured by quantizing weights in
   PyTorch, not by writing a file and running llama.cpp. GGUF round-trip and C
   decoder parity are done for LTC only, not for the IQ tiers.
-- **The reference IQ3 run has only 200 items.** It scored 0.7700 against dense
-  FP16 at 0.8050, but the interval is too wide to establish a deployment-grade
-  non-inferiority margin.
+- **The 800-item result is a letter-logprob harness, not a published benchmark
+  reproduction.** It closes the preregistered BF16 MLP-reconstruction gate,
+  not open-ended generation or model-card score parity.
 - **IQ2 still has no reference encoder.** IQ2 versus IQ3 is not yet a valid
   format-to-format comparison.
-- **The measured baseline is FP16.** The BF16 model-card results are external
-  published values and were not reproduced by this harness.
+- **The current measured baseline is BF16.** Older 200-item FP16 results remain
+  historical search evidence and are not pooled with the new stratified set.
 - Attention projections and embeddings are untouched; only MLP tensors are
   quantized, so real deployment size would differ.
 - Generation quality remains unmeasured: the 32,768-token GPQA run and

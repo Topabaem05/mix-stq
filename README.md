@@ -43,6 +43,13 @@ to 256 entries would cost eight address bits and collapse into IQ3_XXS.
 
 ## Why reconstruction error misleads
 
+A caveat first: the error figures below come from an approximate encoder that
+does not enforce two IQ-format constraints — the 7-bit even-parity sign packing
+and the per-subblock shared scale. It understates real IQ3_XXS error by about
+3.5x. Arm-to-arm comparisons hold since every arm went through the same
+encoder, but the absolute values are not ggml's. See
+`docs/mix-stq-v24-encoder-audit.md` and `src/mixstq/iq3_reference.py`.
+
 Weighted mean error is a poor proxy for task accuracy in two specific ways.
 
 Below a threshold it saturates: from 2.06 to 2.56 bpw error improves 36% while
@@ -53,8 +60,11 @@ lower, because averaging hides the bottleneck tensors.
 
 ## Encoder
 
-The scale is solved in closed form rather than searched. For a fixed codebook
-entry the per-lane objective is quadratic in the scale:
+There are two encoders. `iq3_reference.py` is a faithful port of ggml's
+`quantize_row_iq3_xxs_impl`, including parity forcing, the 31-point scale
+search, and off-grid lane repair. `torch_iq2.py` is a fast approximation used
+for sweeps; it solves the scale in closed form and does **not** produce storable
+blocks. For a fixed codebook entry the per-lane objective is quadratic:
 
 ```
 objective(step) = quadratic * step^2 - 2 * linear * step
@@ -62,9 +72,10 @@ step*           = linear / quadratic
 minimum         = -linear^2 / quadratic
 ```
 
-Taking argmin of the minimum over entries replaces a 144-point grid search. It
-is 84–102x faster *and* lands lower error on every tier, since the grid was
-missing the optimum. This turned a 195-minute sweep into 13 minutes.
+Taking argmin of the minimum over entries replaces a 144-point grid search and
+runs 84–102x faster, which turned a 195-minute sweep into 13 minutes. It also
+reports lower error, but that is because it optimizes over states the format
+cannot store, not because it found a better encoding.
 
 Supported tiers, all extracted from `ggml-common.h` rather than invented:
 
@@ -96,6 +107,9 @@ a plausible-looking null result.
 - **No GGUF checkpoint exists.** Accuracy is measured by quantizing weights in
   PyTorch, not by writing a file and running llama.cpp. GGUF round-trip and C
   decoder parity are done for LTC only, not for the IQ tiers.
+- **Accuracy was measured with the approximate encoder**, so absolute numbers
+  are optimistic relative to real IQ3_XXS. Whether IQ3_XXS still matches bf16
+  under the reference encoder is open.
 - Attention projections and embeddings are untouched; only MLP tensors are
   quantized, so real deployment size would differ.
 - 200-item samples give a paired CI half-width around ±3–6 points, so only the
@@ -123,4 +137,3 @@ clang -O2 -Wall -Wextra -o ltc_vecdot csrc/ltc_vecdot.c
 
 GPU stages use `src/mixstq/vast_control.py`, which defaults to a dry run and
 refuses to spend without `--confirm`.
-

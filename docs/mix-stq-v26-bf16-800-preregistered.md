@@ -41,6 +41,9 @@ MMLU 과목명은 정렬해 결과에 기록하고 모든 과목이 정확히 10
 ARC 원본 test 1,172개 중 위 조건을 만족하는 항목은 사전 점검상 1,165개이므로 수량은
 충분하다. 프롬프트와 정답을 포함한 정규화 item record를 순서대로 직렬화해 SHA-256
 fingerprint를 만들며, dense와 IQ3 팔이 동일 fingerprint를 쓰지 않으면 실행을 실패시킨다.
+Pinned parquet를 독립 DuckDB 경로로 위 규칙에 따라 정규화한 실행 전 예상 fingerprint는
+`a72515282c6fc20f34188b3102d99468ab2b02266105ed9c6e4ec405fbad8fd0`이다. 실제
+`datasets` 스트리밍 로더의 값이 이 값과 다르면 모델을 로드하기 전에 중단한다.
 
 정답 벡터 캐시는 최소한 다음 identity가 모두 일치할 때만 재사용한다.
 
@@ -70,6 +73,11 @@ item order로 평가한다. 실행 전 `nvidia-smi`로 다른 compute process가
 
 출력 목표는 `artifacts/qwen38_bf16_800.json`이다. 비정상 종료나 일부 문항만 끝난
 파일은 최종 결과로 승격하지 않고, 실패 원인과 완료 수량을 별도 기록한다.
+
+실행기는 generic 기본값과 분리된 `--protocol qwen38_bf16_800` 경로를 사용한다.
+이 경로는 위 model/revision, `bfloat16`, `--mmlu-per-subject 10`, `--arc 230`,
+`--arms dense,dense_iq3_ref`와 예상 fingerprint가 모두 맞지 않으면 tokenizer,
+importance matrix, model을 로드하기 전에 실패해야 한다.
 
 ## 4단계: 판정 규칙을 고정
 

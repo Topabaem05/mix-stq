@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -11,6 +12,53 @@ from task_accuracy import compare
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 LETTERS = ["A", "B", "C", "D"]
+MMLU_DATASET_REVISION = "c30699e8356da336a370243923dbaf21066bb9fe"
+ARC_DATASET_REVISION = "210d026faf9955653af8916fad021475a3f00453"
+MMLU_SUBJECT_COUNT = 57
+
+
+def item_fingerprint(items):
+    canonical = json.dumps(
+        items, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def cache_provenance(
+    model, revision, dtype, mmlu, arc, low_layers, arm, sampling_scheme, fingerprint
+):
+    return {
+        "model": model,
+        "revision": revision,
+        "dtype": dtype,
+        "mmlu": mmlu,
+        "arc": arc,
+        "low_layers": low_layers,
+        "arm": arm,
+        "sampling_scheme": sampling_scheme,
+        "dataset_revisions": {
+            "cais/mmlu": MMLU_DATASET_REVISION,
+            "allenai/ai2_arc": ARC_DATASET_REVISION,
+        },
+        "ordered_item_fingerprint": fingerprint,
+    }
+
+
+def load_cached_correct(path, provenance, item_count):
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    correct = payload.get("correct")
+    if payload.get("provenance") != provenance:
+        return None
+    if not isinstance(correct, list) or len(correct) != item_count:
+        return None
+    if any(type(value) is not int or value not in (0, 1) for value in correct):
+        return None
+    return correct
 
 
 def single_token_letters(tokenizer):
@@ -23,34 +71,84 @@ def single_token_letters(tokenizer):
     return tokens
 
 
+def mmlu_item(row):
+    choices = row.get("choices") or []
+    if len(choices) != 4:
+        return None
+    return {
+        "task": "mmlu",
+        "subject": row.get("subject", ""),
+        "question": (row.get("question") or "").strip(),
+        "choices": [str(c).strip() for c in choices],
+        "answer": int(row["answer"]),
+    }
+
+
 def load_mmlu(limit, subjects=None):
-    dataset = load_dataset("cais/mmlu", "all", split="test", streaming=True)
+    dataset = load_dataset(
+        "cais/mmlu",
+        "all",
+        split="test",
+        streaming=True,
+        revision=MMLU_DATASET_REVISION,
+    )
     items = []
     for row in dataset:
         if subjects and row.get("subject") not in subjects:
             continue
-        choices = row.get("choices") or []
-        if len(choices) != 4:
+        item = mmlu_item(row)
+        if item is None:
             continue
-        items.append({
-            "task": "mmlu",
-            "subject": row.get("subject", ""),
-            "question": (row.get("question") or "").strip(),
-            "choices": [str(c).strip() for c in choices],
-            "answer": int(row["answer"]),
-        })
+        items.append(item)
         if len(items) >= limit:
             break
     return items
 
 
+def load_mmlu_stratified(per_subject):
+    dataset = load_dataset(
+        "cais/mmlu",
+        "all",
+        split="test",
+        streaming=True,
+        revision=MMLU_DATASET_REVISION,
+    )
+    by_subject = {}
+    for row in dataset:
+        item = mmlu_item(row)
+        if item is None:
+            continue
+        subject_items = by_subject.setdefault(item["subject"], [])
+        if len(subject_items) < per_subject:
+            subject_items.append(item)
+
+    if len(by_subject) != MMLU_SUBJECT_COUNT:
+        raise RuntimeError(
+            "expected %d MMLU subjects at pinned revision, found %d"
+            % (MMLU_SUBJECT_COUNT, len(by_subject))
+        )
+    short = sorted(subject for subject, items in by_subject.items() if len(items) < per_subject)
+    if short:
+        raise RuntimeError(
+            "MMLU subjects have fewer than %d valid four-choice items: %s"
+            % (per_subject, ", ".join(short))
+        )
+    return [item for subject in sorted(by_subject) for item in by_subject[subject]]
+
+
 def load_arc(limit):
-    dataset = load_dataset("allenai/ai2_arc", "ARC-Challenge", split="test", streaming=True)
+    dataset = load_dataset(
+        "allenai/ai2_arc",
+        "ARC-Challenge",
+        split="test",
+        streaming=True,
+        revision=ARC_DATASET_REVISION,
+    )
     items = []
     for row in dataset:
         choices = (row.get("choices") or {}).get("text") or []
         labels = (row.get("choices") or {}).get("label") or []
-        if len(choices) != 4:
+        if len(choices) != 4 or len(labels) != 4:
             continue
         key = row.get("answerKey")
         if key not in labels:
@@ -188,43 +286,91 @@ def build_plans(low_layers):
     }
 
 
-def main() -> int:
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="paired task accuracy across quantization arms")
     parser.add_argument("--model", required=True)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--imatrix", required=True)
-    parser.add_argument("--mmlu", type=int, default=140)
-    parser.add_argument("--arc", type=int, default=60)
+    mmlu = parser.add_mutually_exclusive_group()
+    mmlu.add_argument("--mmlu", type=int)
+    mmlu.add_argument("--mmlu-per-subject", type=int)
+    parser.add_argument("--arc", type=int, default=230)
     parser.add_argument("--low-layers", type=int, default=6)
     parser.add_argument("--arms", default="dense,mixed_stq,mixed_ltc")
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
     parser.add_argument("--out", required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.mmlu is None and args.mmlu_per_subject is None:
+        args.mmlu = 140
+    if args.mmlu is not None and args.mmlu < 0:
+        parser.error("--mmlu must be non-negative")
+    if args.mmlu_per_subject is not None and args.mmlu_per_subject <= 0:
+        parser.error("--mmlu-per-subject must be positive")
+    if args.arc < 0:
+        parser.error("--arc must be non-negative")
+    return args
+
+
+def main() -> int:
+    args = parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     tokenizer = AutoTokenizer.from_pretrained(args.model, revision=args.revision)
     importance = torch.load(Path(args.imatrix).with_suffix(".pt"), map_location="cpu")
 
-    items = load_mmlu(args.mmlu) + load_arc(args.arc)
-    print("items: %d (mmlu %d, arc %d)" % (len(items), args.mmlu, args.arc), flush=True)
+    if args.mmlu_per_subject is None:
+        mmlu_items = load_mmlu(args.mmlu)
+        mmlu_count = args.mmlu
+        mmlu_sampling = {"mode": "prefix", "count": args.mmlu}
+    else:
+        mmlu_items = load_mmlu_stratified(args.mmlu_per_subject)
+        mmlu_count = len(mmlu_items)
+        mmlu_sampling = {
+            "mode": "stratified_per_subject",
+            "per_subject": args.mmlu_per_subject,
+            "subjects": MMLU_SUBJECT_COUNT,
+            "count": mmlu_count,
+        }
+    arc_items = load_arc(args.arc)
+    items = mmlu_items + arc_items
+    sampling_scheme = {
+        "mmlu": mmlu_sampling,
+        "arc": {"mode": "valid_4_choice_prefix", "count": args.arc},
+    }
+    print("items: %d (mmlu %d, arc %d)" % (len(items), mmlu_count, args.arc), flush=True)
+    fingerprint = item_fingerprint(items)
 
     plans = build_plans(args.low_layers)
     selected = [name.strip() for name in args.arms.split(",") if name.strip()]
 
     results = {}
     details = {}
+    provenance_by_arm = {}
     cache_dir = Path(args.out).parent
     for name in selected:
         if name not in plans:
             raise ValueError("unknown arm " + name)
+        provenance = cache_provenance(
+            args.model,
+            args.revision,
+            args.dtype,
+            mmlu_count,
+            args.arc,
+            args.low_layers,
+            name,
+            sampling_scheme,
+            fingerprint,
+        )
+        provenance_by_arm[name] = provenance
         cached = cache_dir / ("correct_%s.json" % name)
         if cached.is_file():
-            correct = json.loads(cached.read_text(encoding="utf-8"))["correct"]
-            if len(correct) == len(items):
+            correct = load_cached_correct(cached, provenance, len(items))
+            if correct is not None:
                 results[name] = correct
                 details[name] = {"accuracy": sum(correct) / len(correct), "correct": sum(correct)}
                 print("[arm] %s reused from %s" % (name, cached.name), flush=True)
                 continue
+            print("[arm] %s rejected cache %s" % (name, cached.name), flush=True)
         print("[arm] %s" % name, flush=True)
         model = AutoModelForCausalLM.from_pretrained(
             args.model,
@@ -248,13 +394,16 @@ def main() -> int:
         results[name] = correct
         accuracy = sum(correct) / len(correct)
         details[name] = {"accuracy": accuracy, "correct": sum(correct)}
-        cached.write_text(json.dumps({"arm": name, "correct": correct}), encoding="utf-8")
+        cached.write_text(
+            json.dumps({"provenance": provenance, "correct": correct}), encoding="utf-8"
+        )
         print("  accuracy %.4f (%d/%d)" % (accuracy, sum(correct), len(correct)), flush=True)
         del model
         if device == "cuda":
             torch.cuda.empty_cache()
 
     report = compare(results, "dense")
+    report["provenance"] = provenance_by_arm
     report["correct_vectors"] = results
     report["items_detail"] = [
         {"task": i["task"], "subject": i["subject"]} for i in items
@@ -263,9 +412,16 @@ def main() -> int:
         "model": args.model,
         "revision": args.revision,
         "low_layers": args.low_layers,
-        "mmlu": args.mmlu,
+        "mmlu": mmlu_count,
+        "mmlu_per_subject": args.mmlu_per_subject,
         "arc": args.arc,
         "dtype": args.dtype,
+        "sampling_scheme": sampling_scheme,
+        "dataset_revisions": {
+            "cais/mmlu": MMLU_DATASET_REVISION,
+            "allenai/ai2_arc": ARC_DATASET_REVISION,
+        },
+        "ordered_item_fingerprint": fingerprint,
     }
     Path(args.out).write_text(json.dumps(report, indent=1), encoding="utf-8")
 

@@ -134,51 +134,109 @@ def apply_plan(model, importance, plan, device):
     stats = {"bytes": 0, "params": 0, "errors": []}
     with torch.no_grad():
         for name, module in model.named_modules():
-            if not name.endswith("mlp.experts"):
+            if name.endswith("mlp.experts"):
+                layer = int(name.split(".")[2])
+                channel = importance.get(name)
+                if channel is None:
+                    continue
+                channel = channel.to(device)
+                for attribute in (GATE_UP, DOWN):
+                    param = getattr(module, attribute, None)
+                    if param is None:
+                        continue
+                    tier = plan(layer, attribute)
+                    data = param.data
+                    flat = data.reshape(-1, data.shape[-1])
+                    width = flat.shape[-1]
+                    numel = int(data.numel())
+                    if tier == "fp16":
+                        stats["bytes"] += numel * 2
+                        stats["params"] += numel
+                        continue
+                    if channel.numel() >= width:
+                        local = channel[:width]
+                    else:
+                        local = channel.repeat(width // channel.numel() + 1)[:width]
+                    if tier == "ltc":
+                        quantized, relative = tl.quantize_rows(flat, local, learn=True)
+                        bpw = 1.3125
+                    elif tier == "stq":
+                        quantized, relative = tl.quantize_rows(
+                            flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
+                        bpw = 1.3125
+                    elif tier == "iq2":
+                        quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
+                        bpw = tq.TIERS["iq2_xxs"]["bpw"]
+                    elif tier in tq.TIERS:
+                        quantized, relative = tq.quantize_rows(flat, local, tier=tier)
+                        bpw = tq.TIERS[tier]["bpw"]
+                    else:
+                        raise RuntimeError("unknown tier " + tier)
+                    param.data = quantized.reshape(data.shape).to(data.dtype)
+                    stats["bytes"] += int(numel * bpw / 8)
+                    stats["params"] += numel
+                    stats["errors"].append(relative)
+                    print("    L%02d %s -> %s err %.4f" % (layer, attribute, tier, relative),
+                          flush=True)
                 continue
-            layer = int(name.split(".")[2])
+            if not isinstance(module, torch.nn.Linear):
+                continue
+            parts = name.split(".")
+            if "mtp" in parts or "visual" in parts:
+                continue
+            try:
+                layers_position = parts.index("layers")
+            except ValueError:
+                continue
+            if (parts[:layers_position] != ["model", "language_model"]
+                    or len(parts) != layers_position + 4
+                    or parts[layers_position + 2] != "mlp"
+                    or parts[layers_position + 3] not in ("gate_proj", "up_proj", "down_proj")):
+                continue
+            try:
+                layer = int(parts[layers_position + 1])
+            except ValueError:
+                continue
             channel = importance.get(name)
             if channel is None:
                 continue
             channel = channel.to(device)
-            for attribute in (GATE_UP, DOWN):
-                param = getattr(module, attribute, None)
-                if param is None:
-                    continue
-                tier = plan(layer, attribute)
-                data = param.data
-                flat = data.reshape(-1, data.shape[-1])
-                width = flat.shape[-1]
-                numel = int(data.numel())
-                if tier == "fp16":
-                    stats["bytes"] += numel * 2
-                    stats["params"] += numel
-                    continue
-                if channel.numel() >= width:
-                    local = channel[:width]
-                else:
-                    local = channel.repeat(width // channel.numel() + 1)[:width]
-                if tier == "ltc":
-                    quantized, relative = tl.quantize_rows(flat, local, learn=True)
-                    bpw = 1.3125
-                elif tier == "stq":
-                    quantized, relative = tl.quantize_rows(
-                        flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
-                    bpw = 1.3125
-                elif tier == "iq2":
-                    quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
-                    bpw = tq.TIERS["iq2_xxs"]["bpw"]
-                elif tier in tq.TIERS:
-                    quantized, relative = tq.quantize_rows(flat, local, tier=tier)
-                    bpw = tq.TIERS[tier]["bpw"]
-                else:
-                    raise RuntimeError("unknown tier " + tier)
-                param.data = quantized.reshape(data.shape).to(data.dtype)
-                stats["bytes"] += int(numel * bpw / 8)
+            attribute = parts[layers_position + 3]
+            param = module.weight
+            tier = plan(layer, attribute)
+            data = param.data
+            flat = data.reshape(-1, data.shape[-1])
+            width = flat.shape[-1]
+            numel = int(data.numel())
+            if tier == "fp16":
+                stats["bytes"] += numel * 2
                 stats["params"] += numel
-                stats["errors"].append(relative)
-                print("    L%02d %s -> %s err %.4f" % (layer, attribute, tier, relative),
-                      flush=True)
+                continue
+            if channel.numel() >= width:
+                local = channel[:width]
+            else:
+                local = channel.repeat(width // channel.numel() + 1)[:width]
+            if tier == "ltc":
+                quantized, relative = tl.quantize_rows(flat, local, learn=True)
+                bpw = 1.3125
+            elif tier == "stq":
+                quantized, relative = tl.quantize_rows(
+                    flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
+                bpw = 1.3125
+            elif tier == "iq2":
+                quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
+                bpw = tq.TIERS["iq2_xxs"]["bpw"]
+            elif tier in tq.TIERS:
+                quantized, relative = tq.quantize_rows(flat, local, tier=tier)
+                bpw = tq.TIERS[tier]["bpw"]
+            else:
+                raise RuntimeError("unknown tier " + tier)
+            param.data = quantized.reshape(data.shape).to(data.dtype)
+            stats["bytes"] += int(numel * bpw / 8)
+            stats["params"] += numel
+            stats["errors"].append(relative)
+            print("    L%02d %s -> %s err %.4f" % (layer, attribute, tier, relative),
+                  flush=True)
     stats["mean_error"] = sum(stats["errors"]) / max(len(stats["errors"]), 1)
     stats["bpw"] = stats["bytes"] * 8.0 / max(stats["params"], 1)
     del stats["errors"]

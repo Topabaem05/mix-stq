@@ -153,6 +153,18 @@ def build_plans(low_layers):
             return "iq3_xxs"
         return "ltc" if layer in low else "iq3_xxs"
 
+    def dense_iq2(_layer, _attribute):
+        return "iq2_xxs"
+
+    def dense_iq3(_layer, _attribute):
+        return "iq3_xxs"
+
+    def dense_iq3s(_layer, _attribute):
+        return "iq3_s"
+
+    def dense_fp16(_layer, _attribute):
+        return "fp16"
+
     return {
         "dense": dense,
         "uniform_iq2": uniform_iq2,
@@ -165,6 +177,10 @@ def build_plans(low_layers):
         "iq3_low_iq2_high": iq3_low_iq2_high,
         "iq2_low_iq3_high": iq2_low_iq3_high,
         "ltc_iq3": ltc_iq3,
+        "dense_iq2": dense_iq2,
+        "dense_iq3": dense_iq3,
+        "dense_iq3s": dense_iq3s,
+        "dense_fp16": dense_fp16,
     }
 
 

@@ -8,6 +8,7 @@ __pycache__/
 .omo.ouroboros/
 .superpower/
 .superpowers/
+.fablize/
 test-results/
 coverage/
 

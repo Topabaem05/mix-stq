@@ -129,6 +129,9 @@ a plausible-looking null result.
 
 ## Planned 4–5 bpw deployment controls
 
+Current pinned execution status and continuation checklist:
+[`mix-stq-v27-status-and-next-steps.md`](docs/mix-stq-v27-status-and-next-steps.md).
+
 After the reference-encoder, 800+ item, GGUF round-trip, and C-parity gates are
 closed, the same Qwen revision will be converted to `IQ4_XS`, `Q4_K_M`, and a
 `Q5_K_M` quality control. Reports will separate physical file bits per total

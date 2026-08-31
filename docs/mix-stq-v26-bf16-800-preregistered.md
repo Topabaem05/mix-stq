@@ -108,3 +108,6 @@ importance matrix, model을 로드하기 전에 실패해야 한다.
 
 이번 결과가 어느 분기로 가더라도 v22/v25의 과목 편향 200문항 결과를 소급해
 “검증 표본”으로 승격하지 않는다.
+
+실제 Vast.ai 실행, 복구, 산출물 보존 및 인스턴스 파괴 절차는
+[`mix-stq-v26-vast-runbook.md`](mix-stq-v26-vast-runbook.md)에 고정한다.

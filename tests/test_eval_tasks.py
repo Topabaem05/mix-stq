@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import sys
@@ -53,6 +54,214 @@ from eval_tasks import (  # noqa: E402
 )
 
 failures = []
+
+required_new_api = {
+    name: getattr(eval_tasks, name, None)
+    for name in (
+        "STRICT_CACHE_SCHEMA",
+        "STRICT_IMATRIX_SHA256",
+        "STRICT_IMATRIX_SIZE",
+        "atomic_write_json",
+        "build_strict_decision",
+        "gpu_preflight",
+        "resolve_imatrix_identity",
+        "source_identity",
+        "validate_strict_execution",
+        "validate_strict_plan_stats",
+    )
+}
+missing_new_api = sorted(name for name, value in required_new_api.items() if value is None)
+if missing_new_api:
+    failures.append("final strict gate API is missing: %s" % ", ".join(missing_new_api))
+
+
+def complete_strict_plan_stats():
+    per_tensor_params = 89128960
+    inventory = []
+    for layer in range(64):
+        for attribute in ("gate_proj", "up_proj", "down_proj"):
+            module_name = "model.language_model.layers.%d.mlp.%s" % (layer, attribute)
+            inventory.append({
+                "module_name": module_name,
+                "weight_name": module_name + ".weight",
+                "layer": layer,
+                "attribute": attribute,
+                "tier": "iq3_xxs_ref",
+                "params": per_tensor_params,
+                "bpw": 3.0625,
+            })
+    inventory.sort(key=lambda record: record["weight_name"])
+    return {
+        "params": 17112760320,
+        "bytes": 6550978560,
+        "bpw": 3.0625,
+        "mean_error": 0.0,
+        "tensor_inventory": inventory,
+        "skipped_targets": [],
+    }
+
+
+if not missing_new_api:
+    atomic_write_json = required_new_api["atomic_write_json"]
+    build_strict_decision = required_new_api["build_strict_decision"]
+    gpu_preflight = required_new_api["gpu_preflight"]
+    resolve_imatrix_identity = required_new_api["resolve_imatrix_identity"]
+    source_identity = required_new_api["source_identity"]
+    validate_strict_execution = required_new_api["validate_strict_execution"]
+    validate_strict_plan_stats = required_new_api["validate_strict_plan_stats"]
+
+    valid_plan_stats = complete_strict_plan_stats()
+    validate_strict_plan_stats("dense", None)
+    validate_strict_plan_stats("dense_iq3_ref", valid_plan_stats)
+    invalid_plan_stats = []
+    for mutation in ("null", "partial", "tier", "layer", "duplicate", "skipped", "params"):
+        candidate = None if mutation == "null" else json.loads(json.dumps(valid_plan_stats))
+        if mutation == "partial":
+            candidate["tensor_inventory"].pop()
+        elif mutation == "tier":
+            candidate["tensor_inventory"][0]["tier"] = "iq3_xxs"
+        elif mutation == "layer":
+            candidate["tensor_inventory"][0]["layer"] = 64
+        elif mutation == "duplicate":
+            candidate["tensor_inventory"][0] = dict(candidate["tensor_inventory"][1])
+        elif mutation == "skipped":
+            candidate["skipped_targets"] = [{"reason": "missing_importance"}]
+        elif mutation == "params":
+            candidate["params"] -= 1
+        invalid_plan_stats.append((mutation, candidate))
+    for mutation, candidate in invalid_plan_stats:
+        try:
+            validate_strict_plan_stats("dense_iq3_ref", candidate)
+        except RuntimeError:
+            pass
+        else:
+            failures.append("strict plan validation accepted %s evidence" % mutation)
+    try:
+        validate_strict_plan_stats("dense", valid_plan_stats)
+    except RuntimeError:
+        pass
+    else:
+        failures.append("strict dense accepted non-null plan evidence")
+
+    valid_strict_arm_execution = {
+        "requested_dtype": "bfloat16",
+        "parameter_elements_by_dtype_before_plan": {"torch.bfloat16": 2},
+        "parameter_elements_by_dtype_after_plan": {"torch.bfloat16": 2},
+        "plan_stats": valid_plan_stats,
+    }
+    validate_strict_execution("dense_iq3_ref", valid_strict_arm_execution)
+    try:
+        validate_strict_execution(
+            "dense_iq3_ref",
+            dict(valid_strict_arm_execution,
+                 parameter_elements_by_dtype_after_plan={"torch.float32": 2}),
+        )
+    except RuntimeError:
+        pass
+    else:
+        failures.append("fresh strict execution accepted a mixed post-plan dtype")
+
+    decision_cases = [
+        ((-0.03, -0.01, 0.01), "iq3_advantage_signal"),
+        ((0.001, 0.015, 0.01), "noninferior"),
+        ((0.021, 0.03, 0.01), "significant_dense_advantage"),
+        ((-0.01, 0.03, 0.50), "inconclusive"),
+    ]
+    for (low, high, p_value), expected_branch in decision_cases:
+        comparison = {
+            "accuracy_delta": (low + high) / 2,
+            "ci_95": [low, high],
+            "mcnemar_p": p_value,
+        }
+        decision = build_strict_decision(comparison)
+        if decision.get("primary") != expected_branch:
+            failures.append("strict decision selected %r instead of %r" % (
+                decision.get("primary"), expected_branch))
+        if decision.get("margin") != 0.02:
+            failures.append("strict decision changed the frozen noninferiority margin")
+        if decision.get("raw") != comparison:
+            failures.append("strict decision did not preserve raw comparison statistics")
+    overlapping = build_strict_decision({
+        "accuracy_delta": 0.008,
+        "ci_95": [0.001, 0.015],
+        "mcnemar_p": 0.01,
+    })
+    if not overlapping.get("noninferior") or not overlapping.get(
+            "significant_dense_advantage") or overlapping.get("primary") != "noninferior":
+        failures.append("strict decision priority mishandled a small significant dense advantage")
+
+    class Completed:
+        def __init__(self, stdout):
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    def successful_smi(command, **_kwargs):
+        if any("query-compute-apps" in part for part in command):
+            return Completed("")
+        return Completed("0, NVIDIA H100 NVL, 570.86.15, 97871, 96800\n")
+
+    original_cuda_available = eval_tasks.torch.cuda.is_available
+    eval_tasks.torch.cuda.is_available = lambda: True
+    try:
+        preflight = gpu_preflight(run_command=successful_smi)
+        if preflight.get("gpu", {}).get("total_memory_mib") != 97871:
+            failures.append("GPU preflight did not parse total memory")
+
+        def occupied_smi(command, **kwargs):
+            if any("query-compute-apps" in part for part in command):
+                return Completed("GPU-uuid, 123, python, 1000\n")
+            return successful_smi(command, **kwargs)
+
+        try:
+            gpu_preflight(run_command=occupied_smi)
+        except RuntimeError:
+            pass
+        else:
+            failures.append("GPU preflight accepted an existing compute process")
+    finally:
+        eval_tasks.torch.cuda.is_available = original_cuda_available
+
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "atomic.json"
+        atomic_write_json(target, {"status": "complete", "value": 1})
+        if json.loads(target.read_text(encoding="utf-8")) != {
+                "status": "complete", "value": 1}:
+            failures.append("atomic JSON writer did not persist the complete payload")
+        if list(Path(tmp).glob(".*.tmp")):
+            failures.append("atomic JSON writer left a temporary file after success")
+
+        imatrix_path = Path(tmp) / "importance.pt"
+        imatrix_path.write_bytes(b"test-imatrix")
+        original_size = eval_tasks.STRICT_IMATRIX_SIZE
+        original_sha = eval_tasks.STRICT_IMATRIX_SHA256
+        eval_tasks.STRICT_IMATRIX_SIZE = imatrix_path.stat().st_size
+        eval_tasks.STRICT_IMATRIX_SHA256 = hashlib.sha256(b"test-imatrix").hexdigest()
+        try:
+            identity = resolve_imatrix_identity(imatrix_path, strict=True)
+            if identity != {
+                "path": str(imatrix_path.resolve()),
+                "size": len(b"test-imatrix"),
+                "sha256": hashlib.sha256(b"test-imatrix").hexdigest(),
+            }:
+                failures.append("strict imatrix identity did not bind path, size, and SHA-256")
+            imatrix_path.write_bytes(b"wrong")
+            try:
+                resolve_imatrix_identity(imatrix_path, strict=True)
+            except RuntimeError:
+                pass
+            else:
+                failures.append("strict imatrix identity accepted wrong bytes")
+        finally:
+            eval_tasks.STRICT_IMATRIX_SIZE = original_size
+            eval_tasks.STRICT_IMATRIX_SHA256 = original_sha
+
+    source_hashes = source_identity()
+    if set(source_hashes) != {
+        "eval_tasks.py", "eval_mixed.py", "iq3_vectorized.py", "torch_iq2.py",
+        "tier_tables.json", "task_accuracy.py",
+    } or any(len(digest) != 64 for digest in source_hashes.values()):
+        failures.append("source identity did not bind all evaluator and quantizer sources")
 
 item = {
     "task": "mmlu",
@@ -330,6 +539,12 @@ strict_provenance = cache_provenance(
     sampling_scheme,
     fingerprint,
     runtime_identity("cpu", "float16"),
+    imatrix_identity={
+        "path": "/immutable/qwen38_imatrix.pt",
+        "size": 7137641,
+        "sha256": "def82108b5d58871434cfeb87009eee8e7b8c68b6c4eb9512ffffa4f9ca2a9e0",
+    },
+    source_hashes=source_hashes,
 )
 if provenance.get("protocol") != "generic":
     failures.append("generic cache provenance is missing its protocol identity")
@@ -404,16 +619,49 @@ valid_strict_execution = {
 }
 with tempfile.TemporaryDirectory() as tmp:
     cache = Path(tmp) / "correct_dense.json"
-    cache.write_text(
-        json.dumps({
+    valid_strict_cache = {
+        "run_id": "completed-run-id",
+        "status": "complete",
+        "provenance": strict_bfloat16_provenance,
+        "execution": valid_strict_execution,
+        "correct": [1],
+    }
+    cache.write_text(json.dumps(valid_strict_cache), encoding="utf-8")
+    if load_cached_result(cache, strict_bfloat16_provenance, 1) is None:
+        failures.append("strict cache with BF16 execution evidence was rejected")
+
+    for label, metadata in (
+        ("failed status", {"run_id": "failed-run-id", "status": "failed"}),
+        ("running status", {"run_id": "running-run-id", "status": "running"}),
+        ("missing status", {"run_id": "missing-status-run-id"}),
+        ("missing run_id", {"status": "complete"}),
+        ("empty run_id", {"run_id": "", "status": "complete"}),
+        ("blank run_id", {"run_id": "   ", "status": "complete"}),
+    ):
+        incomplete = {
             "provenance": strict_bfloat16_provenance,
             "execution": valid_strict_execution,
             "correct": [1],
-        }),
-        encoding="utf-8",
-    )
-    if load_cached_result(cache, strict_bfloat16_provenance, 1) is None:
-        failures.append("strict cache with BF16 execution evidence was rejected")
+            **metadata,
+        }
+        cache.write_text(json.dumps(incomplete), encoding="utf-8")
+        if load_cached_result(cache, strict_bfloat16_provenance, 1) is not None:
+            failures.append("strict cache reused otherwise-valid %s metadata" % label)
+
+    for field, value in {
+        "cache_schema": required_new_api["STRICT_CACHE_SCHEMA"] - 1,
+        "imatrix": dict(strict_bfloat16_provenance["imatrix"], sha256="0" * 64),
+        "source_sha256": dict(strict_bfloat16_provenance["source_sha256"],
+                              **{"eval_tasks.py": "0" * 64}),
+    }.items():
+        contaminated = dict(strict_bfloat16_provenance, **{field: value})
+        cache.write_text(json.dumps({
+            "provenance": contaminated,
+            "execution": valid_strict_execution,
+            "correct": [1],
+        }), encoding="utf-8")
+        if load_cached_result(cache, strict_bfloat16_provenance, 1) is not None:
+            failures.append("strict cache reused mismatched %s" % field)
 
     invalid_strict_executions = [
         dict(
@@ -580,6 +828,7 @@ originals = {
 with tempfile.TemporaryDirectory() as tmp:
     out = Path(tmp) / "report.json"
     cache = Path(tmp) / "correct_dense.json"
+    (Path(tmp) / "imatrix.pt").write_bytes(b"generic-test-imatrix")
     contaminated = dict(provenance, model="other/model")
     cache.write_text(
         json.dumps({"provenance": contaminated, "correct": [0]}), encoding="utf-8"
@@ -637,6 +886,285 @@ with tempfile.TemporaryDirectory() as tmp:
         eval_tasks.load_arc = originals["load_arc"]
         eval_tasks.run_arm = originals["run_arm"]
         eval_tasks.torch.load = originals["torch_load"]
+
+
+class StrictStubModel:
+    def __init__(self):
+        self.weight = torch.nn.Parameter(torch.zeros(2, dtype=torch.bfloat16))
+
+    def eval(self):
+        return self
+
+    def parameters(self):
+        return iter([self.weight])
+
+
+class StrictAutoModel:
+    calls = 0
+
+    @classmethod
+    def from_pretrained(cls, *_args, **_kwargs):
+        cls.calls += 1
+        return StrictStubModel()
+
+
+def strict_compare(records, _baseline):
+    count = len(records["dense"])
+    return {
+        "baseline": "dense",
+        "items": count,
+        "arms": {
+            "dense": {"correct": sum(records["dense"]), "accuracy": 1.0},
+            "dense_iq3_ref": {
+                "correct": sum(records["dense_iq3_ref"]), "accuracy": 1.0,
+            },
+        },
+        "comparisons": {
+            "dense_vs_dense_iq3_ref": {
+                "only_first_correct": 0,
+                "only_second_correct": 0,
+                "mcnemar_p": 1.0,
+                "accuracy_delta": 0.0,
+                "ci_95": [0.0, 0.0],
+                "significant": False,
+            },
+        },
+    }
+
+
+strict_originals = {
+    "AutoTokenizer": eval_tasks.AutoTokenizer,
+    "AutoModelForCausalLM": eval_tasks.AutoModelForCausalLM,
+    "load_mmlu_stratified": eval_tasks.load_mmlu_stratified,
+    "load_arc": eval_tasks.load_arc,
+    "item_fingerprint": eval_tasks.item_fingerprint,
+    "resolve_imatrix_identity": eval_tasks.resolve_imatrix_identity,
+    "gpu_preflight": eval_tasks.gpu_preflight,
+    "runtime_identity": eval_tasks.runtime_identity,
+    "apply_plan": eval_tasks.apply_plan,
+    "run_arm": eval_tasks.run_arm,
+    "compare": eval_tasks.compare,
+    "torch_load": eval_tasks.torch.load,
+    "empty_cache": eval_tasks.torch.cuda.empty_cache,
+}
+
+
+def install_strict_main_stubs(imatrix_path, plan_function):
+    arc_item = dict(item, task="arc_challenge", subject="arc")
+    eval_tasks.AutoTokenizer = StubAutoTokenizer
+    eval_tasks.AutoModelForCausalLM = StrictAutoModel
+    eval_tasks.load_mmlu_stratified = lambda _limit: [item] * 570
+    eval_tasks.load_arc = lambda _limit: [arc_item] * 230
+    eval_tasks.item_fingerprint = lambda _items: STRICT_PROTOCOL_FINGERPRINT
+    eval_tasks.resolve_imatrix_identity = lambda _path, strict=False: {
+        "path": str(imatrix_path.resolve()),
+        "size": 7137641,
+        "sha256": "def82108b5d58871434cfeb87009eee8e7b8c68b6c4eb9512ffffa4f9ca2a9e0",
+    }
+    eval_tasks.gpu_preflight = lambda: {
+        "gpu": {
+            "index": 0,
+            "name": "NVIDIA H100 NVL",
+            "driver": "570.86.15",
+            "total_memory_mib": 97871,
+            "free_memory_mib": 96800,
+        },
+        "compute_processes": [],
+    }
+    eval_tasks.runtime_identity = lambda device, requested_dtype: {
+        "platform": "test",
+        "python": "test",
+        "gpu": {"name": "NVIDIA H100 NVL", "capability": [9, 0]},
+        "torch": "test",
+        "cuda": "test",
+        "transformers": "test",
+        "datasets": "test",
+        "device": device,
+        "requested_dtype": requested_dtype,
+    }
+    eval_tasks.apply_plan = plan_function
+    eval_tasks.compare = strict_compare
+    eval_tasks.torch.load = lambda *_args, **_kwargs: {}
+    eval_tasks.torch.cuda.empty_cache = lambda: None
+
+
+def strict_stub_cache_provenance(imatrix_path, arm):
+    runtime = eval_tasks.runtime_identity("cuda", "bfloat16")
+    runtime["gpu_preflight"] = eval_tasks.gpu_preflight()
+    return cache_provenance(
+        "Qwen/Qwen3.8-27B",
+        "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+        "bfloat16",
+        570,
+        230,
+        6,
+        arm,
+        "qwen38_bf16_800",
+        {
+            "mmlu": {
+                "mode": "stratified_per_subject",
+                "per_subject": 10,
+                "subjects": 57,
+                "count": 570,
+            },
+            "arc": {"mode": "valid_4_choice_prefix", "count": 230},
+        },
+        STRICT_PROTOCOL_FINGERPRINT,
+        runtime,
+        imatrix_identity={
+            "path": str(imatrix_path.resolve()),
+            "size": 7137641,
+            "sha256": "def82108b5d58871434cfeb87009eee8e7b8c68b6c4eb9512ffffa4f9ca2a9e0",
+        },
+        source_hashes=eval_tasks.source_identity(),
+    )
+
+
+try:
+    for stale_artifact in ("result", "completion"):
+        with tempfile.TemporaryDirectory() as tmp:
+            StrictAutoModel.calls = 0
+            out = Path(tmp) / "strict-existing.json"
+            completion = out.with_name(out.name + ".complete.json")
+            stale_path = out if stale_artifact == "result" else completion
+            stale_bytes = ("stale-%s-must-be-preserved\n" % stale_artifact).encode("utf-8")
+            stale_path.write_bytes(stale_bytes)
+            imatrix_path = Path(tmp) / "qwen38_imatrix.pt"
+            imatrix_path.write_bytes(b"stub")
+            install_strict_main_stubs(
+                imatrix_path, lambda *_args, **_kwargs: complete_strict_plan_stats())
+            eval_tasks.run_arm = lambda _model, _tokenizer, items, _device, _callback=None: (
+                [1] * len(items)
+            )
+            original_argv = sys.argv
+            sys.argv = ["eval_tasks.py", *strict_cli, "--out", str(out)]
+            try:
+                eval_tasks.main()
+            except FileExistsError as exc:
+                if str(stale_path) not in str(exc):
+                    failures.append("strict rerun refusal omitted the existing %s path" % (
+                        stale_artifact))
+            else:
+                failures.append("strict rerun overwrote an existing %s" % stale_artifact)
+            finally:
+                sys.argv = original_argv
+            if stale_path.read_bytes() != stale_bytes:
+                failures.append("strict rerun did not preserve the existing %s bytes" % (
+                    stale_artifact))
+            if out.with_name(out.name + ".progress.json").exists() or out.with_name(
+                    out.name + ".failure.json").exists():
+                failures.append("strict rerun refusal created progress/failure artifacts")
+            if StrictAutoModel.calls:
+                failures.append("strict rerun refusal reached model loading")
+            if list(Path(tmp).glob(stale_path.name + ".quarantine-*")):
+                failures.append("strict rerun quarantined an existing %s" % stale_artifact)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        StrictAutoModel.calls = 0
+        out = Path(tmp) / "strict-result.json"
+        imatrix_path = Path(tmp) / "qwen38_imatrix.pt"
+        imatrix_path.write_bytes(b"stub")
+        install_strict_main_stubs(
+            imatrix_path, lambda *_args, **_kwargs: complete_strict_plan_stats())
+        (Path(tmp) / "correct_dense.json").write_text(json.dumps({
+            "run_id": "failed-cache-run",
+            "status": "failed",
+            "provenance": strict_stub_cache_provenance(imatrix_path, "dense"),
+            "execution": {
+                "requested_dtype": "bfloat16",
+                "parameter_elements_by_dtype_before_plan": {"torch.bfloat16": 2},
+                "parameter_elements_by_dtype_after_plan": {"torch.bfloat16": 2},
+                "plan_stats": None,
+            },
+            "correct": [1] * 800,
+        }), encoding="utf-8")
+
+        def complete_run_arm(_model, _tokenizer, items, _device, on_progress=None):
+            if on_progress is not None:
+                on_progress(400)
+                on_progress(len(items))
+            return [1] * len(items)
+
+        eval_tasks.run_arm = complete_run_arm
+        original_argv = sys.argv
+        sys.argv = ["eval_tasks.py", *strict_cli, "--out", str(out)]
+        try:
+            eval_tasks.main()
+        finally:
+            sys.argv = original_argv
+        result = json.loads(out.read_text(encoding="utf-8"))
+        completion_path = out.with_name(out.name + ".complete.json")
+        progress_path = out.with_name(out.name + ".progress.json")
+        completion = json.loads(completion_path.read_text(encoding="utf-8"))
+        progress_payload = json.loads(progress_path.read_text(encoding="utf-8"))
+        if result.get("status") != "complete" or result.get("decision", {}).get(
+                "primary") != "noninferior":
+            failures.append("fresh strict path did not produce a complete frozen decision")
+        if completion.get("result_sha256") != hashlib.sha256(out.read_bytes()).hexdigest():
+            failures.append("strict completion marker did not bind the final result SHA-256")
+        if progress_payload.get("completed_items") != {
+                "dense": 800, "dense_iq3_ref": 800}:
+            failures.append("fresh strict progress did not persist per-arm item counts")
+        if result.get("execution", {}).get("dense_iq3_ref", {}).get(
+                "plan_stats", {}).get("params") != 17112760320:
+            failures.append("fresh strict result omitted canonical plan evidence")
+        if not list(Path(tmp).glob("correct_dense.json.quarantine-*")):
+            failures.append("strict path did not quarantine a previous-schema cache")
+        if StrictAutoModel.calls != 2:
+            failures.append("fresh strict path did not evaluate exactly two arms")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        StrictAutoModel.calls = 0
+        out = Path(tmp) / "strict-failure.json"
+        imatrix_path = Path(tmp) / "qwen38_imatrix.pt"
+        imatrix_path.write_bytes(b"stub")
+
+        def mixed_dtype_plan(model, *_args, **_kwargs):
+            model.weight = torch.nn.Parameter(torch.zeros(2, dtype=torch.float32))
+            return complete_strict_plan_stats()
+
+        install_strict_main_stubs(imatrix_path, mixed_dtype_plan)
+
+        def tracked_run_arm(_model, _tokenizer, items, _device, on_progress=None):
+            if on_progress is not None:
+                on_progress(len(items))
+            return [1] * len(items)
+
+        eval_tasks.run_arm = tracked_run_arm
+        original_argv = sys.argv
+        sys.argv = ["eval_tasks.py", *strict_cli, "--out", str(out)]
+        try:
+            eval_tasks.main()
+        except RuntimeError as exc:
+            if "strict BF16 arm dense_iq3_ref" not in str(exc):
+                failures.append("post-plan BF16 failure was unclear: %s" % exc)
+        else:
+            failures.append("fresh strict path accepted a mixed post-plan dtype")
+        finally:
+            sys.argv = original_argv
+        failure_path = out.with_name(out.name + ".failure.json")
+        failure_payload = json.loads(failure_path.read_text(encoding="utf-8"))
+        if failure_payload.get("status") != "failed":
+            failures.append("caught strict failure did not persist failed status")
+        if failure_payload.get("completed_arms") != ["dense"] or failure_payload.get(
+                "completed_items") != {"dense": 800, "dense_iq3_ref": 0}:
+            failures.append("caught strict failure lost completed arm/item counts")
+        if out.exists() or out.with_name(out.name + ".complete.json").exists():
+            failures.append("caught strict failure presented a partial result as complete")
+finally:
+    eval_tasks.AutoTokenizer = strict_originals["AutoTokenizer"]
+    eval_tasks.AutoModelForCausalLM = strict_originals["AutoModelForCausalLM"]
+    eval_tasks.load_mmlu_stratified = strict_originals["load_mmlu_stratified"]
+    eval_tasks.load_arc = strict_originals["load_arc"]
+    eval_tasks.item_fingerprint = strict_originals["item_fingerprint"]
+    eval_tasks.resolve_imatrix_identity = strict_originals["resolve_imatrix_identity"]
+    eval_tasks.gpu_preflight = strict_originals["gpu_preflight"]
+    eval_tasks.runtime_identity = strict_originals["runtime_identity"]
+    eval_tasks.apply_plan = strict_originals["apply_plan"]
+    eval_tasks.run_arm = strict_originals["run_arm"]
+    eval_tasks.compare = strict_originals["compare"]
+    eval_tasks.torch.load = strict_originals["torch_load"]
+    eval_tasks.torch.cuda.empty_cache = strict_originals["empty_cache"]
 
 if failures:
     print("FAIL")

@@ -136,60 +136,91 @@ def jaccard(reference, candidate):
 
 
 def apply_plan(model, importance, plan, device):
-    stats = {"bytes": 0, "params": 0, "errors": []}
+    stats = {
+        "bytes": 0,
+        "params": 0,
+        "errors": [],
+        "tensor_inventory": [],
+        "skipped_targets": [],
+    }
+
+    def skip(module_name, weight_name, layer, attribute, reason):
+        stats["skipped_targets"].append({
+            "module_name": module_name,
+            "weight_name": weight_name,
+            "layer": layer,
+            "attribute": attribute,
+            "reason": reason,
+        })
+
+    def process(module_name, weight_name, layer, attribute, param, channel):
+        if param is None:
+            skip(module_name, weight_name, layer, attribute, "missing_parameter")
+            return
+        if channel is None:
+            skip(module_name, weight_name, layer, attribute, "missing_importance")
+            return
+        tier = plan(layer, attribute)
+        data = param.data
+        flat = data.reshape(-1, data.shape[-1])
+        width = flat.shape[-1]
+        numel = int(data.numel())
+        if tier == "fp16":
+            bpw = 16.0
+            relative = None
+        else:
+            channel = channel.to(device)
+            if channel.numel() >= width:
+                local = channel[:width]
+            else:
+                local = channel.repeat(width // channel.numel() + 1)[:width]
+            if tier == "ltc":
+                quantized, relative = tl.quantize_rows(flat, local, learn=True)
+                bpw = 1.3125
+            elif tier == "stq":
+                quantized, relative = tl.quantize_rows(
+                    flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
+                bpw = 1.3125
+            elif tier == "iq2":
+                quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
+                bpw = tq.TIERS["iq2_xxs"]["bpw"]
+            elif tier in tq.TIERS:
+                quantized, relative = tq.quantize_rows(flat, local, tier=tier)
+                bpw = tq.TIERS[tier]["bpw"]
+            elif tier == "iq3_xxs_ref":
+                if reference_iq3 is None:
+                    raise RuntimeError("iq3_vectorized is required for tier iq3_xxs_ref")
+                quantized, relative = reference_iq3.quantize_rows_reference_torch(flat, local)
+                bpw = tq.TIERS["iq3_xxs"]["bpw"]
+            else:
+                raise RuntimeError("unknown tier " + tier)
+            param.data = quantized.reshape(data.shape).to(data.dtype)
+            relative = float(relative)
+            stats["errors"].append(relative)
+            print("    L%02d %s -> %s err %.4f" % (layer, attribute, tier, relative),
+                  flush=True)
+        tensor_bytes = int(numel * bpw / 8)
+        stats["bytes"] += tensor_bytes
+        stats["params"] += numel
+        stats["tensor_inventory"].append({
+            "module_name": module_name,
+            "weight_name": weight_name,
+            "layer": layer,
+            "attribute": attribute,
+            "tier": tier,
+            "params": numel,
+            "bytes": tensor_bytes,
+            "bpw": float(bpw),
+        })
+
     with torch.no_grad():
         for name, module in model.named_modules():
             if name.endswith("mlp.experts"):
                 layer = int(name.split(".")[2])
                 channel = importance.get(name)
-                if channel is None:
-                    continue
-                channel = channel.to(device)
                 for attribute in (GATE_UP, DOWN):
                     param = getattr(module, attribute, None)
-                    if param is None:
-                        continue
-                    tier = plan(layer, attribute)
-                    data = param.data
-                    flat = data.reshape(-1, data.shape[-1])
-                    width = flat.shape[-1]
-                    numel = int(data.numel())
-                    if tier == "fp16":
-                        stats["bytes"] += numel * 2
-                        stats["params"] += numel
-                        continue
-                    if channel.numel() >= width:
-                        local = channel[:width]
-                    else:
-                        local = channel.repeat(width // channel.numel() + 1)[:width]
-                    if tier == "ltc":
-                        quantized, relative = tl.quantize_rows(flat, local, learn=True)
-                        bpw = 1.3125
-                    elif tier == "stq":
-                        quantized, relative = tl.quantize_rows(
-                            flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
-                        bpw = 1.3125
-                    elif tier == "iq2":
-                        quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
-                        bpw = tq.TIERS["iq2_xxs"]["bpw"]
-                    elif tier in tq.TIERS:
-                        quantized, relative = tq.quantize_rows(flat, local, tier=tier)
-                        bpw = tq.TIERS[tier]["bpw"]
-                    elif tier == "iq3_xxs_ref":
-                        if reference_iq3 is None:
-                            raise RuntimeError(
-                                "iq3_vectorized is required for tier iq3_xxs_ref")
-                        quantized, relative = reference_iq3.quantize_rows_reference_torch(
-                            flat, local)
-                        bpw = tq.TIERS["iq3_xxs"]["bpw"]
-                    else:
-                        raise RuntimeError("unknown tier " + tier)
-                    param.data = quantized.reshape(data.shape).to(data.dtype)
-                    stats["bytes"] += int(numel * bpw / 8)
-                    stats["params"] += numel
-                    stats["errors"].append(relative)
-                    print("    L%02d %s -> %s err %.4f" % (layer, attribute, tier, relative),
-                          flush=True)
+                    process(name, name + "." + attribute, layer, attribute, param, channel)
                 continue
             if not isinstance(module, torch.nn.Linear):
                 continue
@@ -211,52 +242,10 @@ def apply_plan(model, importance, plan, device):
             except ValueError:
                 continue
             channel = importance.get(name)
-            if channel is None:
-                continue
-            channel = channel.to(device)
             attribute = parts[layers_position + 3]
-            param = module.weight
-            tier = plan(layer, attribute)
-            data = param.data
-            flat = data.reshape(-1, data.shape[-1])
-            width = flat.shape[-1]
-            numel = int(data.numel())
-            if tier == "fp16":
-                stats["bytes"] += numel * 2
-                stats["params"] += numel
-                continue
-            if channel.numel() >= width:
-                local = channel[:width]
-            else:
-                local = channel.repeat(width // channel.numel() + 1)[:width]
-            if tier == "ltc":
-                quantized, relative = tl.quantize_rows(flat, local, learn=True)
-                bpw = 1.3125
-            elif tier == "stq":
-                quantized, relative = tl.quantize_rows(
-                    flat, local, patterns=tl.stq_patterns(torch.device(device)), learn=False)
-                bpw = 1.3125
-            elif tier == "iq2":
-                quantized, relative = tq.quantize_rows(flat, local, tier="iq2_xxs")
-                bpw = tq.TIERS["iq2_xxs"]["bpw"]
-            elif tier in tq.TIERS:
-                quantized, relative = tq.quantize_rows(flat, local, tier=tier)
-                bpw = tq.TIERS[tier]["bpw"]
-            elif tier == "iq3_xxs_ref":
-                if reference_iq3 is None:
-                    raise RuntimeError(
-                        "iq3_vectorized is required for tier iq3_xxs_ref")
-                quantized, relative = reference_iq3.quantize_rows_reference_torch(
-                    flat, local)
-                bpw = tq.TIERS["iq3_xxs"]["bpw"]
-            else:
-                raise RuntimeError("unknown tier " + tier)
-            param.data = quantized.reshape(data.shape).to(data.dtype)
-            stats["bytes"] += int(numel * bpw / 8)
-            stats["params"] += numel
-            stats["errors"].append(relative)
-            print("    L%02d %s -> %s err %.4f" % (layer, attribute, tier, relative),
-                  flush=True)
+            process(name, name + ".weight", layer, attribute, module.weight, channel)
+    stats["tensor_inventory"].sort(key=lambda record: record["weight_name"])
+    stats["skipped_targets"].sort(key=lambda record: record["weight_name"])
     stats["mean_error"] = sum(stats["errors"]) / max(len(stats["errors"]), 1)
     stats["bpw"] = stats["bytes"] * 8.0 / max(stats["params"], 1)
     del stats["errors"]

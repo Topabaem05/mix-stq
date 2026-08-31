@@ -94,6 +94,43 @@ if dense_iq3_stats["params"] != expected_params:
     failures.append("dense_iq3 params %d != %d" % (dense_iq3_stats["params"], expected_params))
 if dense_iq3_stats["bpw"] != 3.0625:
     failures.append("dense_iq3 bpw %.4f != 3.0625" % dense_iq3_stats["bpw"])
+inventory = dense_iq3_stats.get("tensor_inventory")
+if not isinstance(inventory, list) or len(inventory) != 6:
+    failures.append("dense_iq3 did not record the six processed tensor identities")
+else:
+    required_inventory_fields = {
+        "module_name", "weight_name", "layer", "attribute", "tier", "params", "bpw"
+    }
+    if any(not required_inventory_fields.issubset(record) for record in inventory):
+        failures.append("dense_iq3 tensor inventory is missing identity or tier fields")
+    if [record["weight_name"] for record in inventory] != sorted(
+            record["weight_name"] for record in inventory):
+        failures.append("dense_iq3 tensor inventory is not deterministic")
+    if {record["layer"] for record in inventory} != {0, 1}:
+        failures.append("dense_iq3 tensor inventory did not bind layers")
+    if {record["attribute"] for record in inventory} != {
+            "gate_proj", "up_proj", "down_proj"}:
+        failures.append("dense_iq3 tensor inventory did not bind projection attributes")
+    if any(record["tier"] != "iq3_xxs" or record["bpw"] != 3.0625
+           for record in inventory):
+        failures.append("dense_iq3 tensor inventory did not bind tier and bpw")
+if dense_iq3_stats.get("skipped_targets") != []:
+    failures.append("complete dense importance unexpectedly recorded skipped targets")
+
+missing_importance = dict(dense_importance)
+missing_name = "model.language_model.layers.1.mlp.down_proj"
+del missing_importance[missing_name]
+missing_stats = apply_plan(DenseModel(), missing_importance, plans["dense_iq3"], "cpu")
+if missing_stats.get("params") == expected_params:
+    failures.append("missing importance silently retained the complete parameter count")
+if missing_stats.get("skipped_targets") != [{
+    "module_name": missing_name,
+    "weight_name": missing_name + ".weight",
+    "layer": 1,
+    "attribute": "down_proj",
+    "reason": "missing_importance",
+}]:
+    failures.append("missing importance did not produce the canonical skipped-target record")
 
 dense_iq3s_stats = apply_plan(DenseModel(), dense_importance, plans["dense_iq3s"], "cpu")
 if dense_iq3s_stats["bpw"] != 3.4375:

@@ -1,7 +1,30 @@
+import io
+import json
+import os
+import ssl
+import stat
+import subprocess
 import sys
+import urllib.error
 
 import pytest
 import vast_control
+
+SENTINEL_TOKEN = "SENTINEL_MIXSTQ_TASK2_TOKEN_7f53c91a"
+
+
+class _Response:
+    def __init__(self, payload):
+        self.body = json.dumps(payload).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return self.body
 
 
 def _offer(offer_id=1, **overrides):
@@ -21,6 +44,427 @@ def _offer(offer_id=1, **overrides):
     }
     offer.update(overrides)
     return offer
+
+
+def test_request_uses_verified_in_process_https_without_observable_token_leakage(
+    monkeypatch, capsys
+):
+    captured = {}
+    expected_context = object()
+
+    def forbidden_subprocess(*_args, **_kwargs):
+        pytest.fail("API requests must not start a child process")
+
+    def fake_urlopen(request, **kwargs):
+        captured["request"] = request
+        captured["metadata_for_logging"] = {
+            "method": request.get_method(),
+            "url": request.full_url,
+            "timeout": kwargs["timeout"],
+        }
+        captured["context"] = kwargs["context"]
+        return _Response({"success": True, "echo": SENTINEL_TOKEN})
+
+    monkeypatch.setenv("MIXSTQ_VAST_KEY", SENTINEL_TOKEN)
+    monkeypatch.setattr(subprocess, "run", forbidden_subprocess)
+    monkeypatch.setattr(vast_control, "_https_context", lambda: expected_context)
+    monkeypatch.setattr(vast_control.urllib.request, "urlopen", fake_urlopen)
+
+    result = vast_control._request("POST", "/bundles", {"limit": 1})
+
+    request = captured["request"]
+    assert request.get_header("Authorization") == "Bearer " + SENTINEL_TOKEN
+    assert captured["context"] is expected_context
+    assert result == {"success": True, "echo": "[REDACTED]"}
+    assert SENTINEL_TOKEN not in repr(request)
+    assert SENTINEL_TOKEN not in json.dumps(captured["metadata_for_logging"])
+    output = capsys.readouterr()
+    assert SENTINEL_TOKEN not in output.out
+    assert SENTINEL_TOKEN not in output.err
+
+
+def test_https_context_requires_certificate_verification():
+    context = vast_control._https_context()
+
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
+
+@pytest.mark.parametrize("failure", ["http", "invalid-json"])
+def test_request_failures_hide_token_headers_and_response_body(
+    monkeypatch, capsys, failure
+):
+    monkeypatch.setenv("MIXSTQ_VAST_KEY", SENTINEL_TOKEN)
+    monkeypatch.setattr(vast_control, "_https_context", ssl.create_default_context)
+
+    if failure == "http":
+        error = urllib.error.HTTPError(
+            vast_control.API + "/instances/",
+            401,
+            "body=" + SENTINEL_TOKEN,
+            {"X-Debug-Token": SENTINEL_TOKEN},
+            io.BytesIO(("server body " + SENTINEL_TOKEN).encode()),
+        )
+
+        def fake_urlopen(*_args, **_kwargs):
+            raise error
+
+    else:
+
+        def fake_urlopen(*_args, **_kwargs):
+            response = _Response({"unused": True})
+            response.body = ("not json " + SENTINEL_TOKEN).encode()
+            return response
+
+    monkeypatch.setattr(vast_control.urllib.request, "urlopen", fake_urlopen)
+
+    with pytest.raises(vast_control.VastError) as caught:
+        vast_control._request("GET", "/instances/")
+
+    output = capsys.readouterr()
+    observable = str(caught.value) + output.out + output.err
+    assert SENTINEL_TOKEN not in observable
+    assert "server body" not in observable
+    assert "not json" not in observable
+
+
+def test_empty_candidate_key_files_never_build_authorization_or_open_url(
+    monkeypatch, tmp_path, capsys
+):
+    primary = tmp_path / ".vast_api_key"
+    secondary = tmp_path / ".config/vastai/vast_api_key"
+    secondary.parent.mkdir(parents=True)
+    primary.write_text("  \n", encoding="utf-8")
+    secondary.write_text("\t\n", encoding="utf-8")
+    calls = {"request": 0, "urlopen": 0}
+
+    def forbidden_request(*_args, **_kwargs):
+        calls["request"] += 1
+        pytest.fail("an empty key must not build an Authorization header")
+
+    def forbidden_urlopen(*_args, **_kwargs):
+        calls["urlopen"] += 1
+        pytest.fail("an empty key must not reach urlopen")
+
+    monkeypatch.delenv("MIXSTQ_VAST_KEY", raising=False)
+    monkeypatch.setattr(vast_control.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(vast_control.urllib.request, "Request", forbidden_request)
+    monkeypatch.setattr(vast_control.urllib.request, "urlopen", forbidden_urlopen)
+
+    with pytest.raises(vast_control.VastError, match=r"no vast\.ai key found") as caught:
+        vast_control._request("GET", "/instances/")
+
+    assert calls == {"request": 0, "urlopen": 0}
+    assert "Authorization" not in str(caught.value)
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err == ""
+
+
+def test_unexpected_instances_payload_never_exposes_ephemeral_secret(
+    monkeypatch, capsys
+):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: {
+            "ephemeral_key": SENTINEL_TOKEN,
+            "detail": "server payload must stay private",
+        },
+    )
+
+    with pytest.raises(vast_control.VastError) as caught:
+        vast_control.instances()
+
+    output = capsys.readouterr()
+    observable = str(caught.value) + repr(caught.value) + output.out + output.err
+    assert str(caught.value) == "unexpected /instances/ payload"
+    assert SENTINEL_TOKEN not in observable
+    assert "ephemeral_key" not in observable
+    assert "server payload" not in observable
+
+
+def test_xdg_default_and_explicit_state_override(monkeypatch, tmp_path):
+    xdg_home = tmp_path / "xdg-state"
+    default_path = xdg_home / "mixstq/vast_state.json"
+    override_path = tmp_path / "override" / "events.json"
+    monkeypatch.setenv("XDG_STATE_HOME", str(xdg_home))
+    monkeypatch.setattr(vast_control, "STATE", default_path)
+
+    assert vast_control._default_state_path() == default_path
+
+    vast_control._save(
+        {"event": "destroy", "at": 100.0, "id": 9},
+        state_path=override_path,
+    )
+
+    assert override_path.is_file()
+    assert not default_path.exists()
+
+
+def test_state_write_is_atomic_private_and_sanitized(monkeypatch, tmp_path, capsys):
+    state_path = tmp_path / "xdg" / "mixstq" / "vast_state.json"
+    replacements = []
+    original_replace = os.replace
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+
+    def recording_replace(source, destination):
+        replacements.append((source, destination))
+        original_replace(source, destination)
+
+    monkeypatch.setattr(vast_control.os, "replace", recording_replace)
+
+    vast_control._save(
+        {
+            "event": "create",
+            "at": 123.0,
+            "offer": 7,
+            "response": {
+                "success": True,
+                "new_contract": 42,
+                "ephemeral_private_key": SENTINEL_TOKEN,
+            },
+            "debug_token": SENTINEL_TOKEN,
+        }
+    )
+
+    serialized = state_path.read_text(encoding="utf-8")
+    assert json.loads(serialized) == [
+        {"event": "create", "at": 123.0, "offer": 7, "instance_id": 42}
+    ]
+    assert SENTINEL_TOKEN not in serialized
+    assert "response" not in serialized
+    assert "ephemeral_private_key" not in serialized
+    assert stat.S_IMODE(state_path.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(state_path.stat().st_mode) == 0o600
+    assert len(replacements) == 1
+    temporary, destination = map(os.fspath, replacements[0])
+    assert os.path.dirname(temporary) == os.fspath(state_path.parent)
+    assert destination == os.fspath(state_path)
+    assert not list(state_path.parent.glob(".vast_state.json.*"))
+    output = capsys.readouterr()
+    assert SENTINEL_TOKEN not in output.out + output.err
+
+
+def test_confirmed_create_never_persists_or_prints_raw_response(
+    monkeypatch, tmp_path, capsys
+):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "search",
+        lambda *_args, **_kwargs: [{"id": 123, "dph": 0.5}],
+    )
+    monkeypatch.setattr(
+        vast_control,
+        "create",
+        lambda *_args, **_kwargs: {
+            "success": True,
+            "new_contract": 456,
+            "ephemeral_key": SENTINEL_TOKEN,
+        },
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vast-control",
+            "create",
+            "--offer",
+            "123",
+            "--max-hourly",
+            "0.75",
+            "--confirm",
+        ],
+    )
+
+    assert vast_control.main() == 0
+
+    output = capsys.readouterr()
+    serialized = state_path.read_text(encoding="utf-8")
+    assert SENTINEL_TOKEN not in output.out + output.err + serialized
+    assert "ephemeral_key" not in output.out + serialized
+    event = json.loads(serialized)[0]
+    assert event.pop("at") > 0
+    assert event == {
+        "event": "create",
+        "offer": 123,
+        "instance_id": 456,
+    }
+
+
+INVALID_NUMBERS = [True, -1, float("nan"), float("inf"), float("-inf")]
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "min_system_ram_gb",
+        "min_cpu_cores",
+        "min_download_mbps",
+        "min_reliability",
+    ],
+)
+@pytest.mark.parametrize("value", INVALID_NUMBERS)
+def test_search_rejects_invalid_optional_minima_before_network(
+    monkeypatch, field, value
+):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not reach network"),
+    )
+    minima = {field: value}
+
+    with pytest.raises(vast_control.VastError):
+        vast_control.search("RTX_4090", 0.6, 24, 80, 10, **minima)
+
+
+@pytest.mark.parametrize("field", ["max_price", "min_vram", "disk", "limit"])
+@pytest.mark.parametrize("value", [*INVALID_NUMBERS, 0])
+def test_search_rejects_invalid_required_numbers_before_network(
+    monkeypatch, field, value
+):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not reach network"),
+    )
+    arguments = {
+        "gpu": "RTX_4090",
+        "max_price": 0.6,
+        "min_vram": 24,
+        "disk": 80,
+        "limit": 10,
+    }
+    arguments[field] = value
+
+    with pytest.raises(vast_control.VastError):
+        vast_control.search(**arguments)
+
+
+def test_reliability_above_one_is_rejected_before_network(monkeypatch):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not reach network"),
+    )
+
+    with pytest.raises(vast_control.VastError):
+        vast_control.search(
+            "RTX_4090", 0.6, 24, 80, 10, min_reliability=1.0001
+        )
+
+
+def test_zero_optional_minima_are_allowed(monkeypatch):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: {"offers": [_offer()]},
+    )
+
+    rows = vast_control.search(
+        "RTX_4090",
+        0.6,
+        24,
+        80,
+        10,
+        min_system_ram_gb=0,
+        min_cpu_cores=0,
+        min_download_mbps=0,
+        min_reliability=0,
+    )
+
+    assert [row["id"] for row in rows] == [1]
+
+
+@pytest.mark.parametrize("field", ["offer_id", "disk"])
+@pytest.mark.parametrize("value", [*INVALID_NUMBERS, 0])
+def test_create_rejects_invalid_required_numbers_before_network(
+    monkeypatch, field, value
+):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not reach network"),
+    )
+    arguments = {"offer_id": 1, "image": "fake/image", "disk": 80, "onstart": None}
+    arguments[field] = value
+
+    with pytest.raises(vast_control.VastError):
+        vast_control.create(**arguments)
+
+
+@pytest.mark.parametrize("value", [*INVALID_NUMBERS, 0])
+def test_destroy_rejects_invalid_instance_id_before_network(monkeypatch, value):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not reach network"),
+    )
+
+    with pytest.raises(vast_control.VastError):
+        vast_control.destroy(value)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("gpu_ram", -1),
+        ("dph_total", 0),
+        ("disk_space", float("inf")),
+        ("cpu_ram", True),
+        ("cpu_cores", float("nan")),
+        ("inet_down", -1),
+        ("reliability2", 1.01),
+    ],
+)
+def test_search_rejects_offers_with_invalid_prices_or_resources(
+    monkeypatch, field, value
+):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: {"offers": [_offer(**{field: value})]},
+    )
+
+    assert vast_control.search("RTX_4090", 0.6, 24, 80, 10) == []
+
+
+def test_invalid_confirmed_create_has_no_network_or_state_mutation(
+    monkeypatch, tmp_path
+):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not reach network"),
+    )
+    monkeypatch.setattr(
+        vast_control,
+        "_save",
+        lambda *_args, **_kwargs: pytest.fail("invalid input must not mutate state"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vast-control",
+            "create",
+            "--offer",
+            "123",
+            "--max-hourly",
+            "nan",
+            "--confirm",
+        ],
+    )
+
+    with pytest.raises(vast_control.VastError):
+        vast_control.main()
+
+    assert not state_path.exists()
 
 
 def test_search_adds_exact_raw_constraints_and_returns_resource_fields(monkeypatch):
@@ -233,7 +677,11 @@ def test_create_confirmation_revalidates_all_requested_constraints(monkeypatch):
     }
 
 
-def test_create_dry_run_keeps_hourly_cap_and_has_no_api_side_effect(monkeypatch, capsys):
+def test_create_dry_run_keeps_hourly_cap_and_has_no_side_effect(
+    monkeypatch, tmp_path, capsys
+):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
     monkeypatch.setattr(
         vast_control,
         "search",
@@ -243,6 +691,11 @@ def test_create_dry_run_keeps_hourly_cap_and_has_no_api_side_effect(monkeypatch,
         vast_control,
         "create",
         lambda *_args, **_kwargs: pytest.fail("dry-run must not create"),
+    )
+    monkeypatch.setattr(
+        vast_control,
+        "_save",
+        lambda *_args, **_kwargs: pytest.fail("dry-run must not write state"),
     )
     monkeypatch.setattr(
         sys,
@@ -264,3 +717,4 @@ def test_create_dry_run_keeps_hourly_cap_and_has_no_api_side_effect(monkeypatch,
     output = capsys.readouterr().out
     assert "DRY RUN" in output
     assert "hourly cap 0.7500" in output
+    assert not state_path.exists()

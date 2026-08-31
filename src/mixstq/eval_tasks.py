@@ -63,7 +63,13 @@ def parameter_dtype_distribution(model):
 
 
 def validate_bfloat16_distribution(distribution, arm):
-    if set(distribution) != {"torch.bfloat16"} or distribution["torch.bfloat16"] <= 0:
+    valid = (
+        isinstance(distribution, dict)
+        and set(distribution) == {"torch.bfloat16"}
+        and type(distribution["torch.bfloat16"]) is int
+        and distribution["torch.bfloat16"] > 0
+    )
+    if not valid:
         raise RuntimeError(
             "strict BF16 arm %s loaded floating parameter elements by dtype %s"
             % (arm, distribution)
@@ -78,6 +84,7 @@ def cache_provenance(
     arc,
     low_layers,
     arm,
+    protocol,
     sampling_scheme,
     fingerprint,
     runtime,
@@ -90,6 +97,7 @@ def cache_provenance(
         "arc": arc,
         "low_layers": low_layers,
         "arm": arm,
+        "protocol": protocol,
         "sampling_scheme": sampling_scheme,
         "dataset_revisions": {
             "cais/mmlu": MMLU_DATASET_REVISION,
@@ -125,6 +133,16 @@ def load_cached_result(path, provenance, item_count):
         return None
     if execution["requested_dtype"] != provenance["dtype"]:
         return None
+    if provenance["protocol"] == STRICT_PROTOCOL:
+        try:
+            validate_bfloat16_distribution(
+                execution["parameter_elements_by_dtype_before_plan"], provenance["arm"]
+            )
+            validate_bfloat16_distribution(
+                execution["parameter_elements_by_dtype_after_plan"], provenance["arm"]
+            )
+        except RuntimeError:
+            return None
     return correct, execution
 
 
@@ -481,6 +499,7 @@ def main() -> int:
             args.arc,
             args.low_layers,
             name,
+            args.protocol,
             sampling_scheme,
             fingerprint,
             runtime,

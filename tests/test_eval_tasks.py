@@ -38,6 +38,7 @@ from eval_tasks import (  # noqa: E402
     item_fingerprint,
     load_arc,
     load_cached_correct,
+    load_cached_result,
     load_mmlu,
     load_mmlu_stratified,
     mmlu_item,
@@ -303,6 +304,7 @@ provenance = cache_provenance(
     0,
     6,
     "dense",
+    "generic",
     sampling_scheme,
     fingerprint,
     runtime_identity("cpu", "float16"),
@@ -316,6 +318,25 @@ if provenance.get("sampling_scheme") != sampling_scheme:
     failures.append("cache provenance is missing the sampling scheme")
 if provenance.get("ordered_item_fingerprint") != fingerprint:
     failures.append("cache provenance is missing the ordered item fingerprint")
+strict_provenance = cache_provenance(
+    "org/model",
+    "revision-a",
+    "float16",
+    1,
+    0,
+    6,
+    "dense",
+    "qwen38_bf16_800",
+    sampling_scheme,
+    fingerprint,
+    runtime_identity("cpu", "float16"),
+)
+if provenance.get("protocol") != "generic":
+    failures.append("generic cache provenance is missing its protocol identity")
+if strict_provenance.get("protocol") != "qwen38_bf16_800":
+    failures.append("strict cache provenance is missing its protocol identity")
+if strict_provenance == provenance:
+    failures.append("generic and strict protocol provenance are identical")
 execution_evidence = {
     "requested_dtype": "float16",
     "parameter_elements_by_dtype_before_plan": {"torch.float16": 2},
@@ -334,6 +355,8 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     if load_cached_correct(cache, provenance, 1) != [1]:
         failures.append("matching cache provenance was not reused")
+    if load_cached_correct(cache, strict_provenance, 1) is not None:
+        failures.append("strict protocol reused a generic protocol cache")
 
     mismatches = {
         "model": "other/model",
@@ -368,6 +391,58 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     if load_cached_correct(cache, provenance, 1) is not None:
         failures.append("cache without arm execution evidence was reused")
+
+strict_bfloat16_provenance = dict(strict_provenance, dtype="bfloat16")
+strict_bfloat16_provenance["runtime"] = dict(
+    strict_bfloat16_provenance["runtime"], requested_dtype="bfloat16"
+)
+valid_strict_execution = {
+    "requested_dtype": "bfloat16",
+    "parameter_elements_by_dtype_before_plan": {"torch.bfloat16": 2},
+    "parameter_elements_by_dtype_after_plan": {"torch.bfloat16": 2},
+    "plan_stats": None,
+}
+with tempfile.TemporaryDirectory() as tmp:
+    cache = Path(tmp) / "correct_dense.json"
+    cache.write_text(
+        json.dumps({
+            "provenance": strict_bfloat16_provenance,
+            "execution": valid_strict_execution,
+            "correct": [1],
+        }),
+        encoding="utf-8",
+    )
+    if load_cached_result(cache, strict_bfloat16_provenance, 1) is None:
+        failures.append("strict cache with BF16 execution evidence was rejected")
+
+    invalid_strict_executions = [
+        dict(
+            valid_strict_execution,
+            parameter_elements_by_dtype_before_plan={"torch.float16": 2},
+        ),
+        dict(
+            valid_strict_execution,
+            parameter_elements_by_dtype_after_plan={"torch.float16": 2},
+        ),
+        dict(valid_strict_execution, parameter_elements_by_dtype_before_plan=["torch.bfloat16"]),
+        dict(valid_strict_execution, parameter_elements_by_dtype_after_plan=None),
+    ]
+    for invalid_execution in invalid_strict_executions:
+        cache.write_text(
+            json.dumps({
+                "provenance": strict_bfloat16_provenance,
+                "execution": invalid_execution,
+                "correct": [1],
+            }),
+            encoding="utf-8",
+        )
+        try:
+            cached = load_cached_result(cache, strict_bfloat16_provenance, 1)
+        except (KeyError, TypeError, RuntimeError) as exc:
+            failures.append("malformed strict cache evidence crashed: %s" % exc)
+            continue
+        if cached is not None:
+            failures.append("strict cache reused non-BF16 or malformed execution evidence")
 
 
 class StubAutoTokenizer:
@@ -577,6 +652,7 @@ print("  dataset revisions are pinned and ambiguous MMLU CLI is rejected")
 print("  partial/zero loads fail before paid loading and invalid answers are rejected")
 print("  strict protocol tuple and ordered fingerprint are enforced before paid loading")
 print("  runtime identity and per-arm dtype evidence persist across cache reuse")
+print("  protocol-bound caches and strict BF16 cache evidence are enforced")
 print("  cache reuse requires exact provenance and deterministic item fingerprint")
 print("  mismatched cache recomputes; report and cache provenance match")
 print("  no GPU, no network, no model download required")

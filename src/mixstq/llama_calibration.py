@@ -12,13 +12,18 @@ from pathlib import Path
 from typing import Any
 
 FORMAT = "mixstq.llama-imatrix-calibration"
-FORMAT_VERSION = 2
+FORMAT_VERSION = 3
 COMMIT_FORMAT = f"{FORMAT}.commit"
 COMMIT_VERSION = 1
 PUBLICATION_PROTOCOL = "staged-pair-with-atomic-commit-marker-v1"
 CANONICAL_PER_DOMAIN = 32
 CANONICAL_MIN_CHARS = 200
+MAX_RECORD_UTF8_BYTES = 512
 MAX_SEPARATOR_UTF8_BYTES = 16
+IMATRIX_CAPACITY_CHUNKS = 128
+IMATRIX_TOKENS_PER_CHUNK = 512
+IMATRIX_TOTAL_TOKEN_CAPACITY = IMATRIX_CAPACITY_CHUNKS * IMATRIX_TOKENS_PER_CHUNK
+CORPUS_UTF8_BYTE_UPPER_BOUND = 65_536
 DOMAIN_ORDER = ("wiki", "code", "chat")
 
 
@@ -75,9 +80,12 @@ class SelectedRecord:
     domain: str
     domain_index: int
     source_index: int
-    text: str
-    source_sha256: str
-    normalized_sha256: str
+    full_normalized_text: str
+    emitted_text: str
+    raw_source_sha256: str
+    full_normalized_text_sha256: str
+    emitted_text_sha256: str
+    emitted_text_was_truncated: bool
 
 
 LoadDataset = Callable[..., Iterable[Mapping[str, object]]]
@@ -92,6 +100,17 @@ def normalize_text(text: str) -> str:
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _truncate_utf8_at_code_point(
+    text: str, max_utf8_bytes: int = MAX_RECORD_UTF8_BYTES
+) -> tuple[str, bool]:
+    if max_utf8_bytes < 1:
+        raise ValueError("max_utf8_bytes must be at least 1")
+    encoded = text.encode("utf-8")
+    if len(encoded) <= max_utf8_bytes:
+        return text, False
+    return encoded[:max_utf8_bytes].decode("utf-8", errors="ignore"), True
 
 
 def _select_records(
@@ -112,17 +131,25 @@ def _select_records(
         raw = row.get(spec.field)
         if not isinstance(raw, str):
             continue
-        text = normalize_text(raw)
-        if len(text) < min_chars:
+        full_normalized_text = normalize_text(raw)
+        if len(full_normalized_text) < min_chars:
             continue
+        emitted_text, was_truncated = _truncate_utf8_at_code_point(
+            full_normalized_text
+        )
         selected.append(
             SelectedRecord(
                 domain=spec.domain,
                 domain_index=len(selected),
                 source_index=source_index,
-                text=text,
-                source_sha256=_sha256(raw.encode("utf-8")),
-                normalized_sha256=_sha256(text.encode("utf-8")),
+                full_normalized_text=full_normalized_text,
+                emitted_text=emitted_text,
+                raw_source_sha256=_sha256(raw.encode("utf-8")),
+                full_normalized_text_sha256=_sha256(
+                    full_normalized_text.encode("utf-8")
+                ),
+                emitted_text_sha256=_sha256(emitted_text.encode("utf-8")),
+                emitted_text_was_truncated=was_truncated,
             )
         )
         if len(selected) == per_domain:
@@ -137,6 +164,14 @@ def _select_records(
 
 def _ordered_hash(record_hashes: Sequence[str]) -> str:
     return _sha256("".join(record_hashes).encode("ascii"))
+
+
+def _enforce_corpus_utf8_byte_upper_bound(corpus_bytes: bytes) -> None:
+    if len(corpus_bytes) > CORPUS_UTF8_BYTE_UPPER_BOUND:
+        raise RuntimeError(
+            f"serialized corpus is {len(corpus_bytes)} UTF-8 bytes, exceeding the "
+            f"fail-closed upper bound of {CORPUS_UTF8_BYTE_UPPER_BOUND} bytes"
+        )
 
 
 def _choose_separator(texts: Sequence[str]) -> str:
@@ -314,16 +349,34 @@ def _build_corpus_with_loader(
         raise ValueError("min_chars must be at least 1")
     _validate_publication_paths(out, manifest_path)
 
-    records = [
-        record
+    if tuple(spec.domain for spec in DATASETS) != DOMAIN_ORDER:
+        raise RuntimeError("dataset order does not match the fixed domain order")
+    records_by_domain = [
+        _select_records(spec, per_domain, min_chars, load_dataset_fn)
         for spec in DATASETS
-        for record in _select_records(spec, per_domain, min_chars, load_dataset_fn)
     ]
-    texts = [record.text for record in records]
-    ordered_normalized_sha256 = [record.normalized_sha256 for record in records]
-    aggregate_hash = _ordered_hash(ordered_normalized_sha256)
+    records = [
+        domain_records[domain_index]
+        for domain_index in range(per_domain)
+        for domain_records in records_by_domain
+    ]
+    texts = [record.emitted_text for record in records]
+    ordered_full_normalized_text_sha256 = [
+        record.full_normalized_text_sha256 for record in records
+    ]
+    ordered_emitted_text_sha256 = [record.emitted_text_sha256 for record in records]
     separator = _choose_separator(texts)
     corpus_bytes = separator.join(texts).encode("utf-8")
+    _enforce_corpus_utf8_byte_upper_bound(corpus_bytes)
+    domain_counts = {
+        spec.domain: {
+            "selected_records": len(domain_records),
+            "emitted_records": sum(
+                record.domain == spec.domain for record in records
+            ),
+        }
+        for spec, domain_records in zip(DATASETS, records_by_domain, strict=True)
+    }
     manifest: dict[str, Any] = {
         "format": FORMAT,
         "version": FORMAT_VERSION,
@@ -337,9 +390,22 @@ def _build_corpus_with_loader(
                 "For each domain in domain_order, select the first per_domain source-order "
                 "records whose normalized field is nonempty and at least min_chars long."
             ),
+            "per_domain_counts": domain_counts,
             "normalization": (
                 "Unicode NFC; CRLF and CR converted to LF; trailing whitespace removed from "
                 "each line; surrounding Unicode whitespace stripped."
+            ),
+        },
+        "serialization": {
+            "ordering_contract": (
+                "Round-robin by domain_index in fixed domain_order: wiki[i], code[i], "
+                "chat[i] for i = 0 through per_domain - 1. Selection within every domain "
+                "retains source order."
+            ),
+            "max_record_utf8_bytes": MAX_RECORD_UTF8_BYTES,
+            "truncation_contract": (
+                "After full normalization and minimum-character qualification, emit at most "
+                "max_record_utf8_bytes by truncating only at a Unicode code-point boundary."
             ),
         },
         "records": [
@@ -348,25 +414,44 @@ def _build_corpus_with_loader(
                 "domain": record.domain,
                 "domain_index": record.domain_index,
                 "source_index": record.source_index,
-                "normalized_chars": len(record.text),
-                "utf8_bytes": len(record.text.encode("utf-8")),
-                "source_sha256": record.source_sha256,
-                "normalized_sha256": record.normalized_sha256,
+                "full_normalized_chars": len(record.full_normalized_text),
+                "full_normalized_utf8_bytes": len(
+                    record.full_normalized_text.encode("utf-8")
+                ),
+                "emitted_text_chars": len(record.emitted_text),
+                "emitted_text_utf8_bytes": len(record.emitted_text.encode("utf-8")),
+                "emitted_text_was_truncated": record.emitted_text_was_truncated,
+                "raw_source_sha256": record.raw_source_sha256,
+                "full_normalized_text_sha256": record.full_normalized_text_sha256,
+                "emitted_text_sha256": record.emitted_text_sha256,
             }
             for ordinal, record in enumerate(records)
         ],
-        "ordered_normalized_sha256": ordered_normalized_sha256,
-        "aggregate_ordered_normalized_sha256": aggregate_hash,
+        "ordered_full_normalized_text_sha256": ordered_full_normalized_text_sha256,
+        "aggregate_ordered_full_normalized_text_sha256": _ordered_hash(
+            ordered_full_normalized_text_sha256
+        ),
+        "ordered_emitted_text_sha256": ordered_emitted_text_sha256,
+        "aggregate_ordered_emitted_text_sha256": _ordered_hash(
+            ordered_emitted_text_sha256
+        ),
         "hash_semantics": {
-            "source_sha256": (
+            "raw_source_sha256": (
                 "SHA-256 over the raw UTF-8 source field before normalization; provenance only."
             ),
-            "normalized_sha256": (
-                "SHA-256 over emitted normalized UTF-8 record text; this feeds the ordered "
-                "aggregate identity."
+            "full_normalized_text_sha256": (
+                "SHA-256 over the complete normalized UTF-8 record before emission truncation."
             ),
-            "aggregate_ordered_normalized_sha256": (
-                "SHA-256 over the ASCII concatenation of normalized_sha256 values in corpus "
+            "emitted_text_sha256": (
+                "SHA-256 over the bounded normalized UTF-8 record actually emitted to the "
+                "corpus."
+            ),
+            "aggregate_ordered_full_normalized_text_sha256": (
+                "SHA-256 over the ASCII concatenation of full_normalized_text_sha256 values "
+                "in corpus order."
+            ),
+            "aggregate_ordered_emitted_text_sha256": (
+                "SHA-256 over the ASCII concatenation of emitted_text_sha256 values in corpus "
                 "order."
             ),
             "corpus_sha256": (
@@ -379,6 +464,20 @@ def _build_corpus_with_loader(
             "separator": separator,
             "byte_size": len(corpus_bytes),
             "sha256": _sha256(corpus_bytes),
+        },
+        "imatrix_capacity": {
+            "chunks": IMATRIX_CAPACITY_CHUNKS,
+            "tokens_per_chunk": IMATRIX_TOKENS_PER_CHUNK,
+            "total_token_capacity": IMATRIX_TOTAL_TOKEN_CAPACITY,
+            "corpus_utf8_byte_upper_bound": CORPUS_UTF8_BYTE_UPPER_BOUND,
+            "corpus_utf8_byte_count": len(corpus_bytes),
+            "byte_upper_bound_check_passed": True,
+            "exact_tokenizer_preflight_required": True,
+            "scope_note": (
+                "The deterministic UTF-8 byte upper-bound gate is conservative bookkeeping; "
+                "it does not replace the later exact llama.cpp tokenizer preflight against "
+                "the 128 * 512-token capacity."
+            ),
         },
         "publication": {
             "protocol": PUBLICATION_PROTOCOL,

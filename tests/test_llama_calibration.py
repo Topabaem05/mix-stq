@@ -103,12 +103,28 @@ def test_deterministic_corpus_revisions_order_and_hashes(tmp_path: Path) -> None
     assert manifest["datasets"] == expected_datasets
     assert [record["domain"] for record in manifest["records"]] == [
         "wiki",
+        "code",
+        "chat",
         "wiki",
         "code",
-        "code",
-        "chat",
         "chat",
     ]
+    assert [record["domain_index"] for record in manifest["records"]] == [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+    ]
+    assert manifest["selection"]["per_domain_counts"] == {
+        domain: {"selected_records": 2, "emitted_records": 2}
+        for domain in calibration.DOMAIN_ORDER
+    }
+    assert "wiki[i], code[i], chat[i]" in manifest["serialization"][
+        "ordering_contract"
+    ]
+    assert manifest["serialization"]["max_record_utf8_bytes"] == 512
 
     expected_calls = [
         (
@@ -136,33 +152,56 @@ def test_deterministic_corpus_revisions_order_and_hashes(tmp_path: Path) -> None
     ]
     selected_raw_texts = [
         rows[spec.domain][2 + domain_index][spec.field]
-        for spec in calibration.DATASETS
         for domain_index in range(2)
+        for spec in calibration.DATASETS
     ]
     assert all(isinstance(text, str) for text in selected_raw_texts)
     expected_source_hashes = [
         hashlib.sha256(text.encode("utf-8")).hexdigest() for text in selected_raw_texts
     ]
-    assert manifest["ordered_normalized_sha256"] == expected_normalized_hashes
-    assert [record["source_sha256"] for record in manifest["records"]] == (
+    assert manifest["ordered_full_normalized_text_sha256"] == expected_normalized_hashes
+    assert manifest["ordered_emitted_text_sha256"] == expected_normalized_hashes
+    assert [record["raw_source_sha256"] for record in manifest["records"]] == (
         expected_source_hashes
     )
-    assert [record["normalized_sha256"] for record in manifest["records"]] == (
+    assert [
+        record["full_normalized_text_sha256"] for record in manifest["records"]
+    ] == expected_normalized_hashes
+    assert [record["emitted_text_sha256"] for record in manifest["records"]] == (
         expected_normalized_hashes
     )
     assert expected_source_hashes != expected_normalized_hashes
-    assert manifest["aggregate_ordered_normalized_sha256"] == hashlib.sha256(
+    expected_aggregate = hashlib.sha256(
         "".join(expected_normalized_hashes).encode("ascii")
     ).hexdigest()
-    assert "provenance only" in manifest["hash_semantics"]["source_sha256"]
-    assert "feeds the ordered aggregate identity" in (
-        manifest["hash_semantics"]["normalized_sha256"]
+    assert manifest["aggregate_ordered_full_normalized_text_sha256"] == (
+        expected_aggregate
     )
+    assert manifest["aggregate_ordered_emitted_text_sha256"] == expected_aggregate
+    assert "provenance only" in manifest["hash_semantics"]["raw_source_sha256"]
+    assert "before emission truncation" in (
+        manifest["hash_semantics"]["full_normalized_text_sha256"]
+    )
+    assert "actually emitted" in manifest["hash_semantics"]["emitted_text_sha256"]
     assert "source hashes do not feed corpus identity" in (
         manifest["hash_semantics"]["corpus_sha256"]
     )
     assert manifest["corpus"]["byte_size"] == len(corpus_bytes)
     assert manifest["corpus"]["sha256"] == hashlib.sha256(corpus_bytes).hexdigest()
+    assert manifest["imatrix_capacity"] == {
+        "chunks": 128,
+        "tokens_per_chunk": 512,
+        "total_token_capacity": 65_536,
+        "corpus_utf8_byte_upper_bound": 65_536,
+        "corpus_utf8_byte_count": len(corpus_bytes),
+        "byte_upper_bound_check_passed": True,
+        "exact_tokenizer_preflight_required": True,
+        "scope_note": (
+            "The deterministic UTF-8 byte upper-bound gate is conservative bookkeeping; "
+            "it does not replace the later exact llama.cpp tokenizer preflight against "
+            "the 128 * 512-token capacity."
+        ),
+    }
     marker = json.loads(
         calibration.commit_marker_path(first_manifest).read_text(encoding="utf-8")
     )
@@ -211,6 +250,71 @@ def test_normalization_is_canonical_and_preserves_code_layout() -> None:
     raw = "  Cafe\u0301  \r\n    return 1\t \r\n\r\n"
     assert calibration.normalize_text(raw) == "Café\n    return 1"
     assert calibration.normalize_text(" \r\n\t ") == ""
+
+
+def test_unicode_safe_truncation_and_unambiguous_hash_semantics(tmp_path: Path) -> None:
+    raw = "  " + ("a" * 510) + "€tail  "
+    full_normalized = calibration.normalize_text(raw)
+    expected_emitted = "a" * 510
+    rows = {
+        spec.domain: [{spec.field: raw}]
+        for spec in calibration.DATASETS
+    }
+    out = tmp_path / "unicode.txt"
+    manifest = calibration._build_corpus_with_loader(
+        out,
+        tmp_path / "unicode.json",
+        per_domain=1,
+        min_chars=200,
+        load_dataset_fn=_loader(rows, []),
+    )
+
+    emitted = out.read_text(encoding="utf-8").split(manifest["corpus"]["separator"])
+    assert emitted == [expected_emitted] * 3
+    for record in manifest["records"]:
+        assert record["full_normalized_chars"] == len(full_normalized)
+        assert record["full_normalized_utf8_bytes"] == len(
+            full_normalized.encode("utf-8")
+        )
+        assert record["emitted_text_chars"] == len(expected_emitted)
+        assert record["emitted_text_utf8_bytes"] == 510
+        assert record["emitted_text_was_truncated"] is True
+        assert record["raw_source_sha256"] == hashlib.sha256(
+            raw.encode("utf-8")
+        ).hexdigest()
+        assert record["full_normalized_text_sha256"] == hashlib.sha256(
+            full_normalized.encode("utf-8")
+        ).hexdigest()
+        assert record["emitted_text_sha256"] == hashlib.sha256(
+            expected_emitted.encode("utf-8")
+        ).hexdigest()
+
+
+def test_corpus_byte_budget_fails_closed_before_publication(tmp_path: Path) -> None:
+    per_domain = 44
+    rows = {
+        spec.domain: [
+            {spec.field: f"{domain_index:03d}:" + ("x" * 600)}
+            for domain_index in range(per_domain)
+        ]
+        for spec in calibration.DATASETS
+    }
+    out = tmp_path / "over-budget.txt"
+    manifest = tmp_path / "over-budget.json"
+
+    with pytest.raises(RuntimeError, match=r"exceeding.*65_?536|exceeding.*65536"):
+        calibration._build_corpus_with_loader(
+            out,
+            manifest,
+            per_domain=per_domain,
+            min_chars=200,
+            load_dataset_fn=_loader(rows, []),
+        )
+
+    assert not out.exists()
+    assert not manifest.exists()
+    assert not calibration.commit_marker_path(manifest).exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_minimum_character_boundary_is_inclusive_and_source_ordered(tmp_path: Path) -> None:
@@ -453,7 +557,27 @@ def test_public_default_build_records_exactly_96_ordered_hashes(
     )
 
     assert len(manifest["records"]) == 96
-    assert len(manifest["ordered_normalized_sha256"]) == 96
+    assert len(manifest["ordered_full_normalized_text_sha256"]) == 96
+    assert len(manifest["ordered_emitted_text_sha256"]) == 96
+    assert manifest["selection"]["per_domain"] == 32
+    assert manifest["selection"]["min_chars"] == 200
+    assert manifest["selection"]["per_domain_counts"] == {
+        domain: {"selected_records": 32, "emitted_records": 32}
+        for domain in calibration.DOMAIN_ORDER
+    }
+    assert [record["domain"] for record in manifest["records"][:6]] == [
+        "wiki",
+        "code",
+        "chat",
+        "wiki",
+        "code",
+        "chat",
+    ]
+    assert all(
+        record["emitted_text_utf8_bytes"] <= calibration.MAX_RECORD_UTF8_BYTES
+        for record in manifest["records"]
+    )
+    assert manifest["corpus"]["byte_size"] <= 65_536
 
 
 def test_cli_exposes_and_requires_committed_state(

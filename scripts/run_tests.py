@@ -18,6 +18,7 @@ OFFLINE = [
     "test_dense_mlp_plan.py",
     "test_generative_scoring.py",
     "test_iq3_reference.py",
+    "test_iq3_vectorized.py",
 ]
 NETWORK = ["test_gguf_roundtrip.py", "test_c_parity.py", "test_vecdot.py"]
 

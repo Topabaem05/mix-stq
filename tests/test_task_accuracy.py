@@ -53,6 +53,16 @@ else:
     cmp = report["comparisons"][key]
     if cmp["only_first_correct"] != 10 or cmp["only_second_correct"] != 0:
         failures.append("discordant counts wrong: %s" % cmp)
+baseline_key = "dense_vs_arm_a"
+if baseline_key not in report["comparisons"]:
+    failures.append("missing baseline comparison")
+elif report["comparisons"][baseline_key]["only_first_correct"] != 10:
+    failures.append("baseline discordant count wrong")
+if len(report["comparisons"]) != 3:
+    failures.append("three arms must produce three pairwise comparisons")
+reordered = compare({"arm_a": [0, 1], "dense": [1, 1]}, "dense")
+if "dense_vs_arm_a" not in reordered["comparisons"]:
+    failures.append("baseline must be first even when input order differs")
 
 try:
     compare({"dense": [1, 0], "bad": [1, 0, 1]}, "dense")
@@ -76,6 +86,5 @@ print("PASS: task-accuracy statistics verified")
 print("  mcnemar: p=1.0 at no disagreement, symmetric, 12v0 highly significant")
 print("  bootstrap: identical arms give zero delta and include zero")
 print("  bootstrap: 80%% vs 55%% excludes zero with positive delta")
-print("  discordant pair counting exact (10 vs 0)")
+print("  all three pairs include baseline, discordant counting exact (10 vs 0)")
 print("  mismatched lengths and missing baseline both raise")
-

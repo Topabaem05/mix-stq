@@ -1,28 +1,32 @@
 # MIX-STQ — where low-bit quantization stops costing accuracy
 
 A measurement study, not a codec proposal. It started as a learned ternary
-codebook (LTC) meant to beat the fixed 3:4 pattern set of `STQ1_0`, and ended
-somewhere else: the bit budget matters far more than the codebook, and one
-standard ggml tier already holds full accuracy.
+codebook (LTC) meant to beat the fixed 3:4 pattern set of `STQ1_0`, and exposed
+something more basic: a low-error proxy is not deployment evidence unless its
+states can actually be stored by the target format.
 
 Artifacts and importance matrices: [topabaem/mix-stq-artifacts](https://huggingface.co/datasets/topabaem/mix-stq-artifacts)
 
 ## Headline result
 
-Qwen3.8-27B, MMLU 140 + ARC-Challenge 60, paired McNemar plus bootstrap CI:
+Qwen3.8-27B, MMLU 140 + ARC-Challenge 60, paired McNemar plus bootstrap CI.
+The measured dense baseline is **FP16**, not the BF16 number on the model card.
 
-| arm | bpw | accuracy | vs bf16 | p | verdict |
-|---|---:|---:|---:|---:|---|
-| bf16 | 16 | 0.8050 | baseline | — | — |
-| IQ2_XXS | 2.0625 | 0.7300 | −0.0750 | **0.0007** | loses |
-| **IQ3_XXS** | **3.0625** | **0.7900** | −0.0150 | 0.5078 | **indistinguishable** |
-| IQ3_S | 3.4375 | 0.7900 | −0.0150 | 0.4531 | indistinguishable |
+| arm | encoder | bpw | accuracy | vs dense FP16 | p | verdict |
+|---|---|---:|---:|---:|---:|---|
+| dense FP16 | dense | 16 | **0.8050** | baseline | — | — |
+| IQ2_XXS | approximation, not storable | 2.0625 | 0.7300 | −0.0750 | **0.0007** | search result only |
+| IQ3_XXS | approximation, not storable | 3.0625 | 0.7900 | −0.0150 | 0.5078 | optimistic proxy |
+| **IQ3_XXS** | **reference-constrained** | **3.0625** | **0.7700** | **−0.0350** | **0.1185** | **unresolved** |
+| IQ3_S | approximation, not storable | 3.4375 | 0.7900 | −0.0150 | 0.4531 | search result only |
 
-**IQ3_XXS at 3.0625 bpw is the answer.** 5.2x compression, no measurable
-accuracy cost, and it matches bf16 exactly on ARC-Challenge (0.967). Spending
-another 0.375 bpw on IQ3_S buys nothing.
+![Qwen3.8-27B Top-1 accuracy by quantization arm](docs/figs/qwen38_top1.svg)
 
-Confirmed on two architectures: OLMoE-1B-7B (MoE) and Qwen3.8-27B (dense).
+The reference-constrained IQ3_XXS point estimate loses 3.5 percentage points.
+Its paired 95% interval permits a dense advantage from 0.0 to 7.5 points, so
+the run proves neither significant damage nor equivalence. The former claim
+that 3.0625 bpw preserves full accuracy is withdrawn pending an 800+ item,
+dtype-aligned run. See [`mix-stq-v25-reference-iq3.md`](docs/mix-stq-v25-reference-iq3.md).
 
 ## What did not survive measurement
 
@@ -35,7 +39,8 @@ Recorded rather than quietly dropped. Each has a dated research note in `docs/`.
 | Sensitivity-driven layer allocation helps | false: worst assignment indistinguishable from best |
 | Mixing tiers by layer helps | false: what sets accuracy is the *lowest* tier present, not the average bpw |
 | 2.06–2.69 bpw is a plateau | artifact of OLMoE's low baseline; on 27B IQ2_XXS loses significantly |
-| IQ3_S beats bf16 | did not reproduce on 27B |
+| IQ3_S beats dense FP16 | did not reproduce on 27B |
+| IQ3_XXS preserves full accuracy | **unresolved** with the valid encoder: −3.5 points, CI allows up to −7.5 |
 
 The LTC line is closed. A learned 32-entry codebook loses to a fixed 256-entry
 grid by 12.5 points at the same 4-value lane structure, and growing the codebook
@@ -60,11 +65,13 @@ lower, because averaging hides the bottleneck tensors.
 
 ## Encoder
 
-There are two encoders. `iq3_reference.py` is a faithful port of ggml's
+There are three encoder paths. `iq3_reference.py` is a faithful NumPy port of ggml's
 `quantize_row_iq3_xxs_impl`, including parity forcing, the 31-point scale
-search, and off-grid lane repair. `torch_iq2.py` is a fast approximation used
-for sweeps; it solves the scale in closed form and does **not** produce storable
-blocks. For a fixed codebook entry the per-lane objective is quadratic:
+search, and off-grid lane repair. `iq3_vectorized.py` is the GPU implementation
+and reconstructs exactly the same values as that oracle in the checked shapes.
+`torch_iq2.py` is a fast approximation used for sweeps; it solves the scale in
+closed form and does **not** produce storable blocks. For a fixed codebook entry
+the per-lane objective is quadratic:
 
 ```
 objective(step) = quadratic * step^2 - 2 * linear * step
@@ -93,6 +100,8 @@ Two scoring protocols, because they answer different questions.
 
 `eval_tasks.py` picks the answer by comparing per-letter log-probabilities.
 Cheap and low-variance, but not how published numbers are produced.
+It records the selected `float16` or `bfloat16` dtype and embeds the per-item
+correctness vectors needed to reproduce every paired comparison.
 
 `eval_generative.py` generates an answer and parses it, matching the protocol
 behind the official GPQA Diamond figure. Batched, since 198 items at 2048 new
@@ -107,14 +116,17 @@ a plausible-looking null result.
 - **No GGUF checkpoint exists.** Accuracy is measured by quantizing weights in
   PyTorch, not by writing a file and running llama.cpp. GGUF round-trip and C
   decoder parity are done for LTC only, not for the IQ tiers.
-- **Accuracy was measured with the approximate encoder**, so absolute numbers
-  are optimistic relative to real IQ3_XXS. Whether IQ3_XXS still matches bf16
-  under the reference encoder is open.
+- **The reference IQ3 run has only 200 items.** It scored 0.7700 against dense
+  FP16 at 0.8050, but the interval is too wide to establish a deployment-grade
+  non-inferiority margin.
+- **IQ2 still has no reference encoder.** IQ2 versus IQ3 is not yet a valid
+  format-to-format comparison.
+- **The measured baseline is FP16.** The BF16 model-card results are external
+  published values and were not reproduced by this harness.
 - Attention projections and embeddings are untouched; only MLP tensors are
   quantized, so real deployment size would differ.
-- 200-item samples give a paired CI half-width around ±3–6 points, so only the
-  differences marked significant above are resolved.
-- Generation quality is unmeasured; everything here is multiple choice.
+- Generation quality remains unmeasured: the 32,768-token GPQA run and
+  Terminal Bench 2.1 full evaluation have not completed.
 
 ## Repository layout
 

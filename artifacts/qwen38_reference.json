@@ -1,0 +1,1710 @@
+{
+ "baseline": "dense",
+ "items": 200,
+ "arms": {
+  "dense": {
+   "correct": 161,
+   "accuracy": 0.805
+  },
+  "dense_iq2": {
+   "correct": 146,
+   "accuracy": 0.73
+  },
+  "dense_iq3": {
+   "correct": 158,
+   "accuracy": 0.79
+  },
+  "dense_iq3_ref": {
+   "correct": 154,
+   "accuracy": 0.77
+  }
+ },
+ "comparisons": {
+  "dense_vs_dense_iq2": {
+   "only_first_correct": 17,
+   "only_second_correct": 2,
+   "mcnemar_p": 0.000728607177734375,
+   "accuracy_delta": 0.07500000000000007,
+   "ci_95": [
+    0.03500000000000003,
+    0.12
+   ],
+   "significant": true
+  },
+  "dense_vs_dense_iq3": {
+   "only_first_correct": 6,
+   "only_second_correct": 3,
+   "mcnemar_p": 0.5078125,
+   "accuracy_delta": 0.015000000000000013,
+   "ci_95": [
+    -0.015000000000000013,
+    0.04500000000000004
+   ],
+   "significant": false
+  },
+  "dense_vs_dense_iq3_ref": {
+   "only_first_correct": 11,
+   "only_second_correct": 4,
+   "mcnemar_p": 0.11846923828125,
+   "accuracy_delta": 0.03500000000000003,
+   "ci_95": [
+    0.0,
+    0.07499999999999996
+   ],
+   "significant": false
+  },
+  "dense_iq2_vs_dense_iq3": {
+   "only_first_correct": 4,
+   "only_second_correct": 16,
+   "mcnemar_p": 0.01181793212890625,
+   "accuracy_delta": -0.06000000000000005,
+   "ci_95": [
+    -0.10499999999999998,
+    -0.020000000000000018
+   ],
+   "significant": true
+  },
+  "dense_iq2_vs_dense_iq3_ref": {
+   "only_first_correct": 5,
+   "only_second_correct": 13,
+   "mcnemar_p": 0.09625244140625,
+   "accuracy_delta": -0.040000000000000036,
+   "ci_95": [
+    -0.08000000000000007,
+    0.0
+   ],
+   "significant": false
+  },
+  "dense_iq3_vs_dense_iq3_ref": {
+   "only_first_correct": 9,
+   "only_second_correct": 5,
+   "mcnemar_p": 0.4239501953125,
+   "accuracy_delta": 0.020000000000000018,
+   "ci_95": [
+    -0.015000000000000013,
+    0.05999999999999994
+   ],
+   "significant": false
+  }
+ },
+ "correct_vectors": {
+  "dense": [
+   1,
+   1,
+   1,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "dense_iq2": [
+   1,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "dense_iq3": [
+   1,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "dense_iq3_ref": [
+   1,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   0,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1
+  ]
+ },
+ "items_detail": [
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "abstract_algebra"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "mmlu",
+   "subject": "anatomy"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  },
+  {
+   "task": "arc_challenge",
+   "subject": "arc"
+  }
+ ],
+ "config": {
+  "model": "Qwen/Qwen3.8-27B",
+  "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "low_layers": 6,
+  "mmlu": 140,
+  "arc": 60,
+  "dtype": "float16"
+ }
+}

@@ -1,0 +1,831 @@
+{
+ "config": {
+  "view": {
+   "continuousWidth": 460,
+   "continuousHeight": 282,
+   "stroke": null
+  },
+  "axisX": {
+   "labelLimit": 0,
+   "labelFontSize": 12.5,
+   "titleFontSize": 12.5,
+   "grid": false,
+   "gridColor": "transparent",
+   "gridWidth": 0,
+   "domain": true,
+   "domainColor": "#121317",
+   "domainWidth": 1,
+   "ticks": false,
+   "tickColor": "transparent",
+   "tickWidth": 0,
+   "tickSize": 0,
+   "labelFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "labelColor": "#54585a",
+   "labelPadding": 7,
+   "titleFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "titleColor": "#54585a",
+   "titleFontWeight": 400
+  },
+  "axisY": {
+   "labelFontSize": 12.5,
+   "titleFontSize": 12.5,
+   "labelSeparation": 8,
+   "grid": true,
+   "gridColor": "#d8dfe4",
+   "gridWidth": 1,
+   "domain": false,
+   "domainColor": "transparent",
+   "domainWidth": 0,
+   "ticks": true,
+   "tickColor": "#d8dfe4",
+   "tickWidth": 1,
+   "tickSize": 5,
+   "labelFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "labelColor": "#54585a",
+   "labelPadding": 7,
+   "titleFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "titleColor": "#54585a",
+   "titleFontWeight": 400,
+   "titlePadding": 8,
+   "labelLimit": 0,
+   "tickCount": 7
+  },
+  "legend": {
+   "labelFontSize": 11.5,
+   "titleFontSize": 11.5,
+   "orient": "top",
+   "direction": "horizontal",
+   "labelFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "labelColor": "#54585a",
+   "titleFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "titleColor": "#8b9196",
+   "gradientLength": 154,
+   "title": null,
+   "offset": 42.5
+  },
+  "facet": {
+   "spacing": 30
+  },
+  "background": "#ffffff",
+  "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+  "title": {
+   "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "fontSize": 16,
+   "fontWeight": 700,
+   "color": "#121317",
+   "anchor": "start",
+   "orient": "top",
+   "offset": 7,
+   "subtitleFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "subtitleFontSize": 13.5,
+   "subtitleColor": "#54585a",
+   "subtitlePadding": 7,
+   "frame": "bounds"
+  },
+  "line": {
+   "strokeWidth": 1.6
+  },
+  "trail": {
+   "size": 1.6
+  },
+  "point": {},
+  "circle": {
+   "size": 66
+  },
+  "square": {
+   "size": 66
+  },
+  "header": {
+   "labelFont": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "labelFontSize": 11.5,
+   "labelColor": "#54585a",
+   "labelFontWeight": "normal",
+   "title": null
+  }
+ },
+ "width": {
+  "step": 64
+ },
+ "title": {
+  "text": "Reference IQ3 is 3.5 points below dense FP16",
+  "subtitle": [
+   "Qwen3.8-27B, MMLU 140 + ARC-Challenge",
+   "60; approximate IQ arms are not storable"
+  ]
+ },
+ "background": "#ffffff",
+ "padding": {
+  "left": 8,
+  "right": 8,
+  "top": 58,
+  "bottom": 8
+ },
+ "resolve": {
+  "scale": {
+   "color": "independent"
+  }
+ },
+ "layer": [
+  {
+   "mark": "bar",
+   "encoding": {
+    "x": {
+     "field": "tier",
+     "type": "nominal",
+     "sort": null,
+     "axis": {
+      "title": null
+     },
+     "scale": {
+      "paddingInner": 0.31999999999999995
+     }
+    },
+    "y": {
+     "field": "accuracy",
+     "type": "quantitative",
+     "scale": {
+      "zero": true,
+      "domain": [
+       0,
+       100
+      ]
+     },
+     "axis": {
+      "format": ",.12~g",
+      "titleAngle": 0,
+      "titleAlign": "right",
+      "titleAnchor": "start",
+      "titleY": -17,
+      "titlePadding": 0,
+      "titleBaseline": "bottom",
+      "orient": "right",
+      "gridColor": {
+       "condition": {
+        "test": "datum.index === 0",
+        "value": "transparent"
+       },
+       "value": "#d8dfe4"
+      }
+     }
+    },
+    "color": {
+     "field": "encoder",
+     "type": "nominal",
+     "sort": null,
+     "scale": {
+      "range": [
+       "#006ba2",
+       "#3ebcd2",
+       "#ebb434"
+      ]
+     },
+     "legend": {
+      "title": null
+     }
+    }
+   }
+  },
+  {
+   "__themeSynthetic": true,
+   "mark": {
+    "type": "text",
+    "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    "fontSize": 11.5,
+    "align": "center",
+    "baseline": "middle"
+   },
+   "encoding": {
+    "text": {
+     "field": "accuracy",
+     "type": "quantitative",
+     "format": ",.1~f"
+    },
+    "x": {
+     "field": "tier",
+     "type": "nominal",
+     "sort": null
+    },
+    "y": {
+     "field": "accuracy",
+     "type": "quantitative",
+     "stack": "zero",
+     "bandPosition": 0.5
+    },
+    "detail": {
+     "field": "encoder",
+     "type": "nominal"
+    },
+    "order": {
+     "field": "__flintStackOrder",
+     "type": "quantitative",
+     "sort": "descending"
+    },
+    "color": {
+     "field": "encoder",
+     "type": "nominal",
+     "sort": null,
+     "scale": {
+      "range": [
+       "#ffffff",
+       "#ffffff",
+       "#121317"
+      ]
+     },
+     "legend": null
+    },
+    "opacity": {
+     "condition": {
+      "test": "abs(datum[\"accuracy\"]) >= 4.159166666666667",
+      "value": 1
+     },
+     "value": 0
+    }
+   },
+   "transform": [
+    {
+     "calculate": "indexof([\"baseline\",\"not storable\",\"reference\"], datum[\"encoder\"])",
+     "as": "__flintStackOrder"
+    }
+   ]
+  }
+ ],
+ "usermeta": {
+  "flintCanvasFurniture": [
+   {
+    "kind": "mastheadTab",
+    "x": 8,
+    "y": 38,
+    "width": 44,
+    "height": 12,
+    "color": "#e3120b"
+   }
+  ]
+ },
+ "data": {
+  "values": [
+   {
+    "tier": "dense FP16",
+    "accuracy": 80.5,
+    "encoder": "baseline"
+   },
+   {
+    "tier": "IQ2_XXS approx",
+    "accuracy": 73,
+    "encoder": "not storable"
+   },
+   {
+    "tier": "IQ3_XXS approx",
+    "accuracy": 79,
+    "encoder": "not storable"
+   },
+   {
+    "tier": "IQ3_XXS reference",
+    "accuracy": 77,
+    "encoder": "reference"
+   },
+   {
+    "tier": "IQ3_S approx",
+    "accuracy": 79,
+    "encoder": "not storable"
+   }
+  ]
+ },
+ "_theme": {
+  "id": "economist",
+  "report": [
+   {
+    "stage": "ground",
+    "path": "compileDefaults.baseSize",
+    "message": "house preset: `baseSize` set to {\"width\":460,\"height\":300}"
+   },
+   {
+    "stage": "ground",
+    "path": "layout.bandStepFit",
+    "message": "the house blends 55% toward the available span per category"
+   },
+   {
+    "stage": "ground",
+    "path": "geometry.cell",
+    "message": "`Bar Chart` builds no cell — the house's cell geometry does not apply here"
+   },
+   {
+    "stage": "ground",
+    "path": "annotation.axisTitles",
+    "message": "the labels on y are values, not names — a headline cannot bind them to a quantity, so the axis title stays"
+   },
+   {
+    "stage": "ground",
+    "path": "legend.placement",
+    "message": "`seriesEnd` not available for this chart — falling through"
+   },
+   {
+    "stage": "ground",
+    "path": "dataLabels.inkMode",
+    "message": "no ink mode declared but the label sits on the mark — it contrasts with what it is printed on"
+   },
+   {
+    "stage": "ground",
+    "path": "annotation.numberFormat",
+    "message": "printed values use `,.1~f` — three significant figures is what a reader takes off a mark, and it holds the longest label to 4 characters where the raw value runs to 4"
+   },
+   {
+    "stage": "realize",
+    "path": "axes.y.grid",
+    "message": "the grid runs 5px past the plot to end under its own number — flush with the last mark it leads nowhere"
+   },
+   {
+    "stage": "realize",
+    "path": "axes.y.title.placement",
+    "message": "the axis title lies flat at the head of its own ruler, beside the values it names"
+   },
+   {
+    "stage": "realize",
+    "path": "axes.y.grid",
+    "message": "the y grid drops its outermost line — the x axis already rules that edge, and a grid line over a spine repaints it in grid ink"
+   },
+   {
+    "stage": "realize",
+    "path": "marks.point.size",
+    "message": "a dot is drawn at 66px² wherever one is drawn — the house's size, not the renderer's"
+   },
+   {
+    "stage": "realize",
+    "path": "legend.gradientLength",
+    "message": "the ramp runs 154px — under half the 342px block, so the key stays a caption to the chart"
+   },
+   {
+    "stage": "realize",
+    "path": "legend.offset",
+    "message": "the top key clears the flat axis title by 24.5px so its last row does not land on the title"
+   },
+   {
+    "stage": "realize",
+    "path": "title.subtitle",
+    "message": "the deck overhangs the 460px block, so it breaks over 2 even lines — the height comes out of the plot, not out of the canvas the caller asked for"
+   },
+   {
+    "stage": "realize",
+    "path": "furniture",
+    "message": "the masthead tab rides the canvas at graphic-left (8px), in a 12px band above the title — clear of the plot's axis gutter"
+   }
+  ],
+  "decisions": {
+   "themeId": "economist",
+   "surface": {
+    "canvas": "#ffffff",
+    "plot": "#ffffff",
+    "panel": "#ffffff"
+   },
+   "text": {
+    "primary": "#121317",
+    "secondary": "#54585a",
+    "muted": "#8b9196",
+    "inverse": "#ffffff"
+   },
+   "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+   "title": {
+    "anchor": "start",
+    "position": "top",
+    "headline": {
+     "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+     "fontSize": 16,
+     "fontWeight": 700,
+     "color": "#121317"
+    },
+    "deck": {
+     "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+     "fontSize": 13.5,
+     "color": "#54585a"
+    },
+    "offset": 7,
+    "deckPadding": 7
+   },
+   "axes": {
+    "y": {
+     "role": "measure",
+     "orient": "right",
+     "domain": {
+      "show": false,
+      "color": "transparent",
+      "width": 0
+     },
+     "ticks": {
+      "show": false,
+      "color": "transparent",
+      "width": 0,
+      "size": 0,
+      "offset": 0
+     },
+     "grid": {
+      "show": true,
+      "color": "#d8dfe4",
+      "width": 1
+     },
+     "label": {
+      "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      "fontSize": 12.5,
+      "color": "#54585a",
+      "limit": 0,
+      "padding": 7,
+      "flush": false
+     },
+     "title": {
+      "show": true,
+      "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      "fontSize": 12.5,
+      "fontWeight": 400,
+      "color": "#54585a",
+      "placement": "flatAboveAxis",
+      "gap": 8
+     },
+     "tickCount": 7,
+     "indexing": false,
+     "zeroRule": {
+      "show": true,
+      "color": "#121317",
+      "width": 1
+     }
+    },
+    "x": {
+     "role": "categorical",
+     "orient": "bottom",
+     "domain": {
+      "show": true,
+      "color": "#121317",
+      "width": 1
+     },
+     "ticks": {
+      "show": false,
+      "color": "transparent",
+      "width": 0,
+      "size": 0,
+      "offset": 0
+     },
+     "grid": {
+      "show": false,
+      "color": "transparent",
+      "width": 0
+     },
+     "label": {
+      "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      "fontSize": 12.5,
+      "color": "#54585a",
+      "limit": 0,
+      "padding": 7,
+      "flush": false
+     },
+     "title": {
+      "show": false,
+      "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      "fontSize": 12.5,
+      "fontWeight": 400,
+      "color": "#54585a"
+     },
+     "indexing": true
+    }
+   },
+   "frame": {
+    "show": false,
+    "color": "transparent",
+    "width": 0
+   },
+   "baseline": {
+    "show": true,
+    "color": "#121317",
+    "width": 1
+   },
+   "series": {
+    "mode": "categorical",
+    "single": "#006ba2",
+    "categorical": [
+     "#006ba2",
+     "#3ebcd2",
+     "#ebb434",
+     "#379a8b",
+     "#9a3d5b",
+     "#a17ba5"
+    ],
+    "overflow": "#b0aca1",
+    "status": {
+     "positive": "#006ba2",
+     "negative": "#e3120b",
+     "neutral": "#b8c4cc"
+    }
+   },
+   "legend": {
+    "show": true,
+    "placement": "top",
+    "orient": "top",
+    "direction": "horizontal",
+    "title": false,
+    "label": {
+     "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+     "fontSize": 11.5,
+     "color": "#54585a"
+    },
+    "maxSwatches": 3
+   },
+   "dataLabels": {
+    "show": true,
+    "possible": true,
+    "placement": "atMark",
+    "inkMode": "contrastWithMark",
+    "text": {
+     "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+     "fontSize": 11.5,
+     "color": "#121317"
+    },
+    "format": ",.1~f",
+    "insideMinValue": 10.872866666666665,
+    "outsideMaxValue": 69.62713333333333,
+    "segmentMinShare": 0.051666666666666666
+   },
+   "marks": {
+    "bandFraction": 0.68,
+    "strokeWidth": 1.6,
+    "point": {
+     "show": false,
+     "size": 66,
+     "secondarySize": 25
+    },
+    "slice": {
+     "gap": 1.5,
+     "style": "rule",
+     "color": "#ffffff"
+    },
+    "connector": {
+     "show": false,
+     "color": "#a1a3a4",
+     "width": 1,
+     "spanWidth": 1.6
+    },
+    "interval": {
+     "fillOpacity": 0.22,
+     "edge": true
+    },
+    "zOrder": "summaryOverData",
+    "sizeRange": [
+     10,
+     450
+    ],
+    "redundantChannels": [],
+    "redundantEncoding": "never",
+    "redundant": {
+     "shape": false,
+     "dash": false
+    }
+   },
+   "facets": {
+    "header": {
+     "show": true,
+     "fieldTitle": false,
+     "font": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+     "fontSize": 11.5,
+     "color": "#54585a"
+    },
+    "panelFrame": false,
+    "axisRepetition": "everyPanel"
+   },
+   "layout": {
+    "padding": 8,
+    "density": "compact",
+    "plotWidth": 460,
+    "xStep": 64,
+    "canvasWidth": 460
+   },
+   "furniture": [
+    {
+     "kind": "mastheadTab",
+     "anchor": "topLeft",
+     "color": "#e3120b",
+     "width": 44,
+     "height": 12
+    }
+   ],
+   "bound": {
+    "measureChannels": [
+     "y"
+    ],
+    "categoricalChannel": "x",
+    "seriesChannel": "color",
+    "seriesField": "encoder",
+    "categoryField": "tier",
+    "seriesCount": 3,
+    "categoryCount": 5,
+    "isFaceted": false,
+    "isPartToWhole": false,
+    "isSigned": false,
+    "markChannel": "length"
+   },
+   "report": [
+    {
+     "stage": "ground",
+     "path": "compileDefaults.baseSize",
+     "message": "house preset: `baseSize` set to {\"width\":460,\"height\":300}"
+    },
+    {
+     "stage": "ground",
+     "path": "layout.bandStepFit",
+     "message": "the house blends 55% toward the available span per category"
+    },
+    {
+     "stage": "ground",
+     "path": "geometry.cell",
+     "message": "`Bar Chart` builds no cell — the house's cell geometry does not apply here"
+    },
+    {
+     "stage": "ground",
+     "path": "annotation.axisTitles",
+     "message": "the labels on y are values, not names — a headline cannot bind them to a quantity, so the axis title stays"
+    },
+    {
+     "stage": "ground",
+     "path": "legend.placement",
+     "message": "`seriesEnd` not available for this chart — falling through"
+    },
+    {
+     "stage": "ground",
+     "path": "dataLabels.inkMode",
+     "message": "no ink mode declared but the label sits on the mark — it contrasts with what it is printed on"
+    },
+    {
+     "stage": "ground",
+     "path": "annotation.numberFormat",
+     "message": "printed values use `,.1~f` — three significant figures is what a reader takes off a mark, and it holds the longest label to 4 characters where the raw value runs to 4"
+    },
+    {
+     "stage": "realize",
+     "path": "axes.y.grid",
+     "message": "the grid runs 5px past the plot to end under its own number — flush with the last mark it leads nowhere"
+    },
+    {
+     "stage": "realize",
+     "path": "axes.y.title.placement",
+     "message": "the axis title lies flat at the head of its own ruler, beside the values it names"
+    },
+    {
+     "stage": "realize",
+     "path": "axes.y.grid",
+     "message": "the y grid drops its outermost line — the x axis already rules that edge, and a grid line over a spine repaints it in grid ink"
+    },
+    {
+     "stage": "realize",
+     "path": "marks.point.size",
+     "message": "a dot is drawn at 66px² wherever one is drawn — the house's size, not the renderer's"
+    },
+    {
+     "stage": "realize",
+     "path": "legend.gradientLength",
+     "message": "the ramp runs 154px — under half the 342px block, so the key stays a caption to the chart"
+    },
+    {
+     "stage": "realize",
+     "path": "legend.offset",
+     "message": "the top key clears the flat axis title by 24.5px so its last row does not land on the title"
+    },
+    {
+     "stage": "realize",
+     "path": "title.subtitle",
+     "message": "the deck overhangs the 460px block, so it breaks over 2 even lines — the height comes out of the plot, not out of the canvas the caller asked for"
+    },
+    {
+     "stage": "realize",
+     "path": "furniture",
+     "message": "the masthead tab rides the canvas at graphic-left (8px), in a 12px band above the title — clear of the plot's axis gutter"
+    }
+   ]
+  }
+ },
+ "_width": 460,
+ "_height": 300,
+ "_options": [
+  {
+   "key": "cornerRadius",
+   "label": "Corners",
+   "type": "continuous",
+   "min": 0,
+   "max": 15,
+   "step": 1,
+   "defaultValue": 0,
+   "applicable": true,
+   "value": 0
+  },
+  {
+   "key": "independentYAxis",
+   "label": "Independent Y",
+   "type": "binary",
+   "applicable": false,
+   "value": false
+  },
+  {
+   "key": "xAxisType",
+   "label": "X as",
+   "type": "discrete",
+   "options": [
+    {
+     "value": "temporal",
+     "label": "Temporal"
+    },
+    {
+     "value": "nominal",
+     "label": "Discrete"
+    }
+   ],
+   "applicable": false
+  },
+  {
+   "key": "yAxisType",
+   "label": "Y as",
+   "type": "discrete",
+   "options": [
+    {
+     "value": "temporal",
+     "label": "Temporal"
+    },
+    {
+     "value": "nominal",
+     "label": "Discrete"
+    }
+   ],
+   "applicable": false
+  },
+  {
+   "key": "showValueLabels",
+   "label": "Values",
+   "type": "binary",
+   "defaultValue": false,
+   "applicable": true,
+   "value": true
+  }
+ ],
+ "_transform": {
+  "chartType": {
+   "key": "chartType",
+   "label": "Chart type",
+   "length": 2,
+   "index": 0,
+   "ids": [
+    "default",
+    "type:Lollipop Chart"
+   ],
+   "labels": [
+    "Bar Chart",
+    "Lollipop Chart"
+   ]
+  },
+  "arrange": {
+   "key": "arrange",
+   "label": "Arrange",
+   "length": 5,
+   "index": 0,
+   "ids": [
+    "default",
+    "flip:x-y",
+    "swap:x-color",
+    "augment:column",
+    "flip:x-y|augment:row"
+   ],
+   "labels": [
+    "Default",
+    "X ⇄ Y",
+    "X ⇄ Color",
+    "Color + Columns",
+    "X ⇄ Y · Color + Rows"
+   ]
+  }
+ },
+ "_pivot": {
+  "key": "pivot",
+  "label": "View",
+  "length": 12,
+  "index": 0,
+  "ids": [
+   "default",
+   "flip:x-y",
+   "swap:x-color",
+   "augment:column",
+   "augment:row",
+   "type:Lollipop Chart",
+   "flip:x-y|augment:column",
+   "flip:x-y|augment:row",
+   "flip:x-y|type:Lollipop Chart",
+   "swap:x-color|type:Lollipop Chart",
+   "augment:column|type:Lollipop Chart",
+   "augment:row|type:Lollipop Chart"
+  ],
+  "labels": [
+   "Default",
+   "X ⇄ Y",
+   "X ⇄ Color",
+   "Color + Columns",
+   "Color + Rows",
+   "θ_→lollipop",
+   "X ⇄ Y · Color + Columns",
+   "X ⇄ Y · Color + Rows",
+   "X ⇄ Y · θ_→lollipop",
+   "X ⇄ Color · θ_→lollipop",
+   "Color + Columns · θ_→lollipop",
+   "Color + Rows · θ_→lollipop"
+  ]
+ }
+}

@@ -7,6 +7,11 @@ from pathlib import Path
 import torch
 import torch_iq2 as tq
 import torch_ltc as tl
+
+try:
+    import iq3_vectorized as reference_iq3
+except ImportError:
+    reference_iq3 = None
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -170,6 +175,13 @@ def apply_plan(model, importance, plan, device):
                     elif tier in tq.TIERS:
                         quantized, relative = tq.quantize_rows(flat, local, tier=tier)
                         bpw = tq.TIERS[tier]["bpw"]
+                    elif tier == "iq3_xxs_ref":
+                        if reference_iq3 is None:
+                            raise RuntimeError(
+                                "iq3_vectorized is required for tier iq3_xxs_ref")
+                        quantized, relative = reference_iq3.quantize_rows_reference_torch(
+                            flat, local)
+                        bpw = tq.TIERS["iq3_xxs"]["bpw"]
                     else:
                         raise RuntimeError("unknown tier " + tier)
                     param.data = quantized.reshape(data.shape).to(data.dtype)
@@ -230,6 +242,13 @@ def apply_plan(model, importance, plan, device):
             elif tier in tq.TIERS:
                 quantized, relative = tq.quantize_rows(flat, local, tier=tier)
                 bpw = tq.TIERS[tier]["bpw"]
+            elif tier == "iq3_xxs_ref":
+                if reference_iq3 is None:
+                    raise RuntimeError(
+                        "iq3_vectorized is required for tier iq3_xxs_ref")
+                quantized, relative = reference_iq3.quantize_rows_reference_torch(
+                    flat, local)
+                bpw = tq.TIERS["iq3_xxs"]["bpw"]
             else:
                 raise RuntimeError("unknown tier " + tier)
             param.data = quantized.reshape(data.shape).to(data.dtype)

@@ -1,0 +1,629 @@
+env 2.11.0+cu128 0.26.0+cu128 5.16.1
+STEP_IMATRIX
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 18 files:   0%|          | 0/18 [00:00<?, ?it/s]Fetching 18 files:   6%|▌         | 1/18 [02:25<41:20, 145.89s/it]Fetching 18 files:  11%|█         | 2/18 [02:58<21:09, 79.35s/it] Fetching 18 files:  17%|█▋        | 3/18 [03:11<12:11, 48.76s/it]Fetching 18 files:  22%|██▏       | 4/18 [03:16<07:22, 31.59s/it]Fetching 18 files:  28%|██▊       | 5/18 [03:28<05:21, 24.71s/it]Fetching 18 files:  33%|███▎      | 6/18 [03:35<03:44, 18.67s/it]Fetching 18 files:  39%|███▉      | 7/18 [04:12<04:30, 24.63s/it]Fetching 18 files:  44%|████▍     | 8/18 [04:20<03:13, 19.31s/it]Fetching 18 files:  50%|█████     | 9/18 [04:25<02:13, 14.81s/it]Fetching 18 files:  56%|█████▌    | 10/18 [05:07<03:06, 23.31s/it]Fetching 18 files:  61%|██████    | 11/18 [05:51<03:27, 29.63s/it]Fetching 18 files:  67%|██████▋   | 12/18 [06:32<03:17, 32.88s/it]Fetching 18 files:  72%|███████▏  | 13/18 [06:36<02:01, 24.27s/it]Fetching 18 files:  78%|███████▊  | 14/18 [06:39<01:11, 17.79s/it]Fetching 18 files:  83%|████████▎ | 15/18 [07:13<01:08, 22.70s/it]Fetching 18 files:  89%|████████▉ | 16/18 [07:23<00:37, 18.76s/it]Fetching 18 files:  94%|█████████▍| 17/18 [07:28<00:14, 14.70s/it]Fetching 18 files: 100%|██████████| 18/18 [07:33<00:00, 11.87s/it]Fetching 18 files: 100%|██████████| 18/18 [07:33<00:00, 25.20s/it]
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<06:42,  2.11it/s]Loading weights:   2%|▏         | 14/851 [00:00<00:26, 31.13it/s]Loading weights:   4%|▍         | 37/851 [00:00<00:10, 78.70it/s]Loading weights:   6%|▌         | 51/851 [00:00<00:08, 89.65it/s]Loading weights:   8%|▊         | 65/851 [00:00<00:07, 101.17it/s]Loading weights:  10%|▉         | 82/851 [00:01<00:06, 115.98it/s]Loading weights:  12%|█▏        | 100/851 [00:01<00:05, 128.87it/s]Loading weights:  14%|█▍        | 121/851 [00:01<00:04, 150.33it/s]Loading weights:  17%|█▋        | 144/851 [00:01<00:04, 170.29it/s]Loading weights:  19%|█▉        | 163/851 [00:01<00:04, 168.17it/s]Loading weights:  22%|██▏       | 186/851 [00:01<00:03, 183.82it/s]Loading weights:  24%|██▍       | 206/851 [00:01<00:04, 153.83it/s]Loading weights:  27%|██▋       | 227/851 [00:01<00:03, 164.85it/s]Loading weights:  30%|██▉       | 253/851 [00:01<00:03, 188.08it/s]Loading weights:  32%|███▏      | 274/851 [00:02<00:03, 191.58it/s]Loading weights:  35%|███▍      | 294/851 [00:02<00:03, 182.21it/s]Loading weights:  37%|███▋      | 313/851 [00:02<00:03, 178.09it/s]Loading weights:  39%|███▉      | 332/851 [00:02<00:03, 155.03it/s]Loading weights:  42%|████▏     | 358/851 [00:02<00:02, 180.14it/s]Loading weights:  44%|████▍     | 378/851 [00:02<00:02, 180.57it/s]Loading weights:  47%|████▋     | 398/851 [00:02<00:02, 184.88it/s]Loading weights:  49%|████▉     | 418/851 [00:02<00:02, 175.82it/s]Loading weights:  52%|█████▏    | 439/851 [00:02<00:02, 184.90it/s]Loading weights:  55%|█████▍    | 465/851 [00:03<00:01, 203.33it/s]Loading weights:  57%|█████▋    | 486/851 [00:03<00:01, 199.68it/s]Loading weights:  60%|█████▉    | 507/851 [00:03<00:01, 192.61it/s]Loading weights:  62%|██████▏   | 527/851 [00:03<00:01, 188.89it/s]Loading weights:  65%|██████▍   | 553/851 [00:03<00:01, 207.56it/s]Loading weights:  67%|██████▋   | 574/851 [00:03<00:01, 197.88it/s]Loading weights:  70%|██████▉   | 595/851 [00:03<00:01, 193.39it/s]Loading weights:  73%|███████▎  | 617/851 [00:03<00:01, 183.53it/s]Loading weights:  76%|███████▌  | 648/851 [00:04<00:00, 216.32it/s]Loading weights:  79%|███████▉  | 671/851 [00:04<00:00, 211.17it/s]Loading weights:  81%|████████▏ | 693/851 [00:04<00:00, 196.57it/s]Loading weights:  84%|████████▍ | 714/851 [00:04<00:00, 198.30it/s]Loading weights:  86%|████████▋ | 735/851 [00:04<00:00, 194.55it/s]Loading weights:  89%|████████▉ | 756/851 [00:04<00:00, 190.24it/s]Loading weights:  92%|█████████▏| 783/851 [00:04<00:00, 209.33it/s]Loading weights:  95%|█████████▍| 805/851 [00:04<00:00, 206.18it/s]Loading weights:  97%|█████████▋| 826/851 [00:04<00:00, 196.74it/s]Loading weights:  99%|█████████▉| 846/851 [00:05<00:00, 187.88it/s]Loading weights: 100%|██████████| 851/851 [00:05<00:00, 168.27it/s]
+{
+ "model_id": "Qwen/Qwen3.8-27B",
+ "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+ "domains": [
+  "wiki",
+  "code",
+  "chat"
+ ],
+ "documents": 96,
+ "observed_tokens": 23553,
+ "sequence_length": 2048
+}
+tensors captured: 192
+STEP_SWEEP
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+items: 200 (mmlu 140, arc 60)
+[arm] dense
+Fetching 18 files:   0%|          | 0/18 [00:00<?, ?it/s]Fetching 18 files: 100%|██████████| 18/18 [00:00<00:00, 3996.69it/s]
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<13:56,  1.02it/s]Loading weights:   3%|▎         | 28/851 [00:01<00:24, 34.01it/s]Loading weights:   5%|▍         | 41/851 [00:01<00:17, 47.59it/s]Loading weights:   6%|▋         | 54/851 [00:01<00:14, 55.60it/s]Loading weights:   8%|▊         | 67/851 [00:01<00:11, 66.87it/s]Loading weights:  10%|▉         | 81/851 [00:01<00:09, 80.37it/s]Loading weights:  11%|█         | 95/851 [00:01<00:08, 90.47it/s]Loading weights:  13%|█▎        | 107/851 [00:01<00:08, 90.39it/s]Loading weights:  14%|█▍        | 119/851 [00:01<00:07, 95.66it/s]Loading weights:  16%|█▌        | 133/851 [00:02<00:07, 100.34it/s]Loading weights:  17%|█▋        | 147/851 [00:02<00:06, 104.01it/s]Loading weights:  19%|█▊        | 159/851 [00:02<00:06, 99.46it/s] Loading weights:  20%|██        | 172/851 [00:02<00:07, 94.69it/s]Loading weights:  22%|██▏       | 186/851 [00:02<00:06, 102.10it/s]Loading weights:  24%|██▎       | 200/851 [00:02<00:06, 105.79it/s]Loading weights:  25%|██▍       | 211/851 [00:02<00:06, 99.52it/s] Loading weights:  26%|██▋       | 225/851 [00:02<00:05, 105.93it/s]Loading weights:  28%|██▊       | 239/851 [00:03<00:05, 109.74it/s]Loading weights:  30%|██▉       | 252/851 [00:03<00:05, 107.32it/s]Loading weights:  31%|███       | 263/851 [00:03<00:06, 89.74it/s] Loading weights:  33%|███▎      | 278/851 [00:03<00:05, 102.62it/s]Loading weights:  34%|███▍      | 292/851 [00:03<00:05, 102.94it/s]Loading weights:  36%|███▌      | 303/851 [00:03<00:05, 103.66it/s]Loading weights:  37%|███▋      | 314/851 [00:03<00:05, 94.22it/s] Loading weights:  39%|███▉      | 331/851 [00:04<00:05, 98.00it/s]Loading weights:  41%|████      | 345/851 [00:04<00:05, 100.41it/s]Loading weights:  42%|████▏     | 359/851 [00:04<00:04, 108.19it/s]Loading weights:  44%|████▎     | 371/851 [00:04<00:04, 104.78it/s]Loading weights:  45%|████▌     | 384/851 [00:04<00:04, 101.17it/s]Loading weights:  47%|████▋     | 398/851 [00:04<00:04, 106.03it/s]Loading weights:  48%|████▊     | 411/851 [00:04<00:04, 107.24it/s]Loading weights:  50%|████▉     | 422/851 [00:04<00:04, 100.45it/s]Loading weights:  51%|█████▏    | 437/851 [00:05<00:04, 98.89it/s] Loading weights:  53%|█████▎    | 451/851 [00:05<00:03, 103.81it/s]Loading weights:  55%|█████▍    | 465/851 [00:05<00:03, 107.54it/s]Loading weights:  56%|█████▌    | 476/851 [00:05<00:03, 95.29it/s] Loading weights:  58%|█████▊    | 490/851 [00:05<00:03, 99.48it/s]Loading weights:  59%|█████▉    | 504/851 [00:05<00:03, 106.66it/s]Loading weights:  61%|██████    | 518/851 [00:05<00:03, 108.18it/s]Loading weights:  62%|██████▏   | 529/851 [00:05<00:03, 102.98it/s]Loading weights:  64%|██████▍   | 543/851 [00:06<00:03, 99.46it/s] Loading weights:  65%|██████▌   | 557/851 [00:06<00:02, 105.76it/s]Loading weights:  67%|██████▋   | 571/851 [00:06<00:02, 96.34it/s] Loading weights:  70%|██████▉   | 592/851 [00:06<00:02, 107.53it/s]Loading weights:  71%|███████   | 606/851 [00:06<00:02, 109.54it/s]Loading weights:  73%|███████▎  | 620/851 [00:06<00:02, 108.84it/s]Loading weights:  74%|███████▍  | 631/851 [00:06<00:02, 95.14it/s] Loading weights:  76%|███████▋  | 649/851 [00:07<00:02, 95.49it/s]Loading weights:  79%|███████▉  | 672/851 [00:07<00:01, 124.27it/s]Loading weights:  81%|████████  | 686/851 [00:07<00:01, 98.25it/s] Loading weights:  82%|████████▏ | 702/851 [00:07<00:01, 98.92it/s]Loading weights:  84%|████████▍ | 716/851 [00:07<00:01, 103.70it/s]Loading weights:  86%|████████▌ | 730/851 [00:07<00:01, 106.11it/s]Loading weights:  87%|████████▋ | 742/851 [00:08<00:01, 97.71it/s] Loading weights:  89%|████████▊ | 755/851 [00:08<00:00, 98.54it/s]Loading weights:  90%|█████████ | 770/851 [00:08<00:00, 106.01it/s]Loading weights:  92%|█████████▏| 783/851 [00:08<00:00, 111.03it/s]Loading weights:  93%|█████████▎| 795/851 [00:08<00:00, 102.12it/s]Loading weights:  95%|█████████▍| 808/851 [00:08<00:00, 102.71it/s]Loading weights:  97%|█████████▋| 822/851 [00:08<00:00, 110.50it/s]Loading weights:  98%|█████████▊| 834/851 [00:08<00:00, 112.41it/s]Loading weights:  99%|█████████▉| 846/851 [00:09<00:00, 103.89it/s]Loading weights: 100%|██████████| 851/851 [00:09<00:00, 94.23it/s] 
+  accuracy 0.8050 (161/200)
+[arm] dense_iq2
+Fetching 18 files:   0%|          | 0/18 [00:00<?, ?it/s]Fetching 18 files: 100%|██████████| 18/18 [00:00<00:00, 3884.21it/s]
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<11:58,  1.18it/s]Loading weights:   0%|          | 2/851 [00:00<06:02,  2.34it/s]Loading weights:   3%|▎         | 28/851 [00:01<00:19, 42.62it/s]Loading weights:   5%|▍         | 42/851 [00:01<00:14, 57.07it/s]Loading weights:   6%|▋         | 54/851 [00:01<00:12, 65.80it/s]Loading weights:   8%|▊         | 67/851 [00:01<00:09, 78.66it/s]Loading weights:   9%|▉         | 80/851 [00:01<00:08, 89.55it/s]Loading weights:  11%|█         | 94/851 [00:01<00:07, 94.76it/s]Loading weights:  12%|█▏        | 106/851 [00:01<00:08, 90.06it/s]Loading weights:  14%|█▍        | 119/851 [00:01<00:07, 95.15it/s]Loading weights:  16%|█▌        | 133/851 [00:02<00:06, 102.63it/s]Loading weights:  17%|█▋        | 147/851 [00:02<00:06, 105.05it/s]Loading weights:  19%|█▊        | 158/851 [00:02<00:07, 92.25it/s] Loading weights:  20%|██        | 172/851 [00:02<00:07, 94.43it/s]Loading weights:  22%|██▏       | 186/851 [00:02<00:06, 104.66it/s]Loading weights:  23%|██▎       | 197/851 [00:02<00:06, 102.85it/s]Loading weights:  24%|██▍       | 208/851 [00:02<00:07, 91.15it/s] Loading weights:  26%|██▋       | 225/851 [00:03<00:06, 97.50it/s]Loading weights:  28%|██▊       | 239/851 [00:03<00:06, 101.03it/s]Loading weights:  30%|██▉       | 253/851 [00:03<00:05, 102.98it/s]Loading weights:  31%|███       | 264/851 [00:03<00:06, 92.42it/s] Loading weights:  33%|███▎      | 278/851 [00:03<00:05, 98.22it/s]Loading weights:  34%|███▍      | 292/851 [00:03<00:05, 106.99it/s]Loading weights:  36%|███▌      | 305/851 [00:03<00:05, 107.48it/s]Loading weights:  37%|███▋      | 316/851 [00:03<00:05, 93.06it/s] Loading weights:  39%|███▉      | 331/851 [00:04<00:05, 99.73it/s]Loading weights:  41%|████      | 345/851 [00:04<00:04, 101.24it/s]Loading weights:  42%|████▏     | 359/851 [00:04<00:04, 104.40it/s]Loading weights:  43%|████▎     | 370/851 [00:04<00:05, 92.22it/s] Loading weights:  45%|████▌     | 384/851 [00:04<00:04, 98.61it/s]Loading weights:  47%|████▋     | 398/851 [00:04<00:04, 102.97it/s]Loading weights:  48%|████▊     | 412/851 [00:04<00:04, 104.01it/s]Loading weights:  50%|████▉     | 423/851 [00:05<00:04, 92.71it/s] Loading weights:  51%|█████▏    | 437/851 [00:05<00:04, 96.27it/s]Loading weights:  53%|█████▎    | 451/851 [00:05<00:03, 106.37it/s]Loading weights:  55%|█████▍    | 465/851 [00:05<00:03, 110.29it/s]Loading weights:  56%|█████▌    | 477/851 [00:05<00:03, 94.09it/s] Loading weights:  58%|█████▊    | 490/851 [00:05<00:03, 95.33it/s]Loading weights:  59%|█████▉    | 504/851 [00:05<00:03, 102.47it/s]Loading weights:  61%|██████    | 518/851 [00:05<00:03, 102.06it/s]Loading weights:  62%|██████▏   | 529/851 [00:06<00:03, 91.36it/s] Loading weights:  64%|██████▍   | 543/851 [00:06<00:03, 99.73it/s]Loading weights:  65%|██████▌   | 557/851 [00:06<00:02, 102.86it/s]Loading weights:  67%|██████▋   | 568/851 [00:06<00:02, 104.55it/s]Loading weights:  68%|██████▊   | 579/851 [00:06<00:03, 85.38it/s] Loading weights:  70%|███████   | 597/851 [00:06<00:02, 101.21it/s]Loading weights:  72%|███████▏  | 610/851 [00:06<00:02, 101.55it/s]Loading weights:  73%|███████▎  | 624/851 [00:07<00:02, 107.60it/s]Loading weights:  75%|███████▍  | 636/851 [00:07<00:02, 103.02it/s]Loading weights:  76%|███████▋  | 649/851 [00:07<00:02, 100.81it/s]Loading weights:  78%|███████▊  | 663/851 [00:07<00:01, 104.58it/s]Loading weights:  79%|███████▉  | 676/851 [00:07<00:01, 104.45it/s]Loading weights:  81%|████████  | 687/851 [00:07<00:01, 98.24it/s] Loading weights:  82%|████████▏ | 699/851 [00:07<00:01, 103.64it/s]Loading weights:  84%|████████▎ | 712/851 [00:07<00:01, 101.66it/s]Loading weights:  85%|████████▌ | 726/851 [00:08<00:01, 102.17it/s]Loading weights:  87%|████████▋ | 737/851 [00:08<00:01, 92.27it/s] Loading weights:  89%|████████▊ | 755/851 [00:08<00:00, 99.29it/s]Loading weights:  90%|█████████ | 769/851 [00:08<00:00, 104.16it/s]Loading weights:  92%|█████████▏| 780/851 [00:08<00:00, 105.39it/s]Loading weights:  93%|█████████▎| 791/851 [00:08<00:00, 95.80it/s] Loading weights:  95%|█████████▍| 807/851 [00:08<00:00, 98.00it/s]Loading weights:  97%|█████████▋| 822/851 [00:08<00:00, 106.02it/s]Loading weights:  98%|█████████▊| 835/851 [00:09<00:00, 104.87it/s]Loading weights:  99%|█████████▉| 846/851 [00:09<00:00, 89.54it/s] Loading weights: 100%|██████████| 851/851 [00:09<00:00, 91.63it/s]
+    L00 gate_proj -> iq2_xxs err 0.0566
+    L00 up_proj -> iq2_xxs err 0.0584
+    L00 down_proj -> iq2_xxs err 0.0311
+    L01 gate_proj -> iq2_xxs err 0.0603
+    L01 up_proj -> iq2_xxs err 0.0622
+    L01 down_proj -> iq2_xxs err 0.0515
+    L02 gate_proj -> iq2_xxs err 0.0684
+    L02 up_proj -> iq2_xxs err 0.0699
+    L02 down_proj -> iq2_xxs err 0.0242
+    L03 gate_proj -> iq2_xxs err 0.0677
+    L03 up_proj -> iq2_xxs err 0.0695
+    L03 down_proj -> iq2_xxs err 0.0482
+    L04 gate_proj -> iq2_xxs err 0.0674
+    L04 up_proj -> iq2_xxs err 0.0701
+    L04 down_proj -> iq2_xxs err 0.0533
+    L05 gate_proj -> iq2_xxs err 0.0683
+    L05 up_proj -> iq2_xxs err 0.0700
+    L05 down_proj -> iq2_xxs err 0.0596
+    L06 gate_proj -> iq2_xxs err 0.0649
+    L06 up_proj -> iq2_xxs err 0.0669
+    L06 down_proj -> iq2_xxs err 0.0560
+    L07 gate_proj -> iq2_xxs err 0.0675
+    L07 up_proj -> iq2_xxs err 0.0707
+    L07 down_proj -> iq2_xxs err 0.0588
+    L08 gate_proj -> iq2_xxs err 0.0682
+    L08 up_proj -> iq2_xxs err 0.0710
+    L08 down_proj -> iq2_xxs err 0.0583
+    L09 gate_proj -> iq2_xxs err 0.0682
+    L09 up_proj -> iq2_xxs err 0.0707
+    L09 down_proj -> iq2_xxs err 0.0602
+    L10 gate_proj -> iq2_xxs err 0.0660
+    L10 up_proj -> iq2_xxs err 0.0692
+    L10 down_proj -> iq2_xxs err 0.0612
+    L11 gate_proj -> iq2_xxs err 0.0663
+    L11 up_proj -> iq2_xxs err 0.0698
+    L11 down_proj -> iq2_xxs err 0.0609
+    L12 gate_proj -> iq2_xxs err 0.0666
+    L12 up_proj -> iq2_xxs err 0.0696
+    L12 down_proj -> iq2_xxs err 0.0619
+    L13 gate_proj -> iq2_xxs err 0.0674
+    L13 up_proj -> iq2_xxs err 0.0702
+    L13 down_proj -> iq2_xxs err 0.0628
+    L14 gate_proj -> iq2_xxs err 0.0678
+    L14 up_proj -> iq2_xxs err 0.0702
+    L14 down_proj -> iq2_xxs err 0.0627
+    L15 gate_proj -> iq2_xxs err 0.0665
+    L15 up_proj -> iq2_xxs err 0.0699
+    L15 down_proj -> iq2_xxs err 0.0629
+    L16 gate_proj -> iq2_xxs err 0.0644
+    L16 up_proj -> iq2_xxs err 0.0686
+    L16 down_proj -> iq2_xxs err 0.0623
+    L17 gate_proj -> iq2_xxs err 0.0637
+    L17 up_proj -> iq2_xxs err 0.0682
+    L17 down_proj -> iq2_xxs err 0.0623
+    L18 gate_proj -> iq2_xxs err 0.0589
+    L18 up_proj -> iq2_xxs err 0.0658
+    L18 down_proj -> iq2_xxs err 0.0579
+    L19 gate_proj -> iq2_xxs err 0.0606
+    L19 up_proj -> iq2_xxs err 0.0689
+    L19 down_proj -> iq2_xxs err 0.0601
+    L20 gate_proj -> iq2_xxs err 0.0640
+    L20 up_proj -> iq2_xxs err 0.0708
+    L20 down_proj -> iq2_xxs err 0.0571
+    L21 gate_proj -> iq2_xxs err 0.0656
+    L21 up_proj -> iq2_xxs err 0.0713
+    L21 down_proj -> iq2_xxs err 0.0602
+    L22 gate_proj -> iq2_xxs err 0.0494
+    L22 up_proj -> iq2_xxs err 0.0713
+    L22 down_proj -> iq2_xxs err 0.0601
+    L23 gate_proj -> iq2_xxs err 0.0627
+    L23 up_proj -> iq2_xxs err 0.0716
+    L23 down_proj -> iq2_xxs err 0.0600
+    L24 gate_proj -> iq2_xxs err 0.0605
+    L24 up_proj -> iq2_xxs err 0.0715
+    L24 down_proj -> iq2_xxs err 0.0576
+    L25 gate_proj -> iq2_xxs err 0.0596
+    L25 up_proj -> iq2_xxs err 0.0711
+    L25 down_proj -> iq2_xxs err 0.0624
+    L26 gate_proj -> iq2_xxs err 0.0537
+    L26 up_proj -> iq2_xxs err 0.0684
+    L26 down_proj -> iq2_xxs err 0.0625
+    L27 gate_proj -> iq2_xxs err 0.0512
+    L27 up_proj -> iq2_xxs err 0.0696
+    L27 down_proj -> iq2_xxs err 0.0647
+    L28 gate_proj -> iq2_xxs err 0.0495
+    L28 up_proj -> iq2_xxs err 0.0689
+    L28 down_proj -> iq2_xxs err 0.0650
+    L29 gate_proj -> iq2_xxs err 0.0503
+    L29 up_proj -> iq2_xxs err 0.0688
+    L29 down_proj -> iq2_xxs err 0.0659
+    L30 gate_proj -> iq2_xxs err 0.0472
+    L30 up_proj -> iq2_xxs err 0.0668
+    L30 down_proj -> iq2_xxs err 0.0652
+    L31 gate_proj -> iq2_xxs err 0.0475
+    L31 up_proj -> iq2_xxs err 0.0675
+    L31 down_proj -> iq2_xxs err 0.0656
+    L32 gate_proj -> iq2_xxs err 0.0460
+    L32 up_proj -> iq2_xxs err 0.0673
+    L32 down_proj -> iq2_xxs err 0.0659
+    L33 gate_proj -> iq2_xxs err 0.0452
+    L33 up_proj -> iq2_xxs err 0.0674
+    L33 down_proj -> iq2_xxs err 0.0649
+    L34 gate_proj -> iq2_xxs err 0.0377
+    L34 up_proj -> iq2_xxs err 0.0644
+    L34 down_proj -> iq2_xxs err 0.0626
+    L35 gate_proj -> iq2_xxs err 0.0407
+    L35 up_proj -> iq2_xxs err 0.0677
+    L35 down_proj -> iq2_xxs err 0.0589
+    L36 gate_proj -> iq2_xxs err 0.0483
+    L36 up_proj -> iq2_xxs err 0.0693
+    L36 down_proj -> iq2_xxs err 0.0582
+    L37 gate_proj -> iq2_xxs err 0.0538
+    L37 up_proj -> iq2_xxs err 0.0696
+    L37 down_proj -> iq2_xxs err 0.0626
+    L38 gate_proj -> iq2_xxs err 0.0393
+    L38 up_proj -> iq2_xxs err 0.0702
+    L38 down_proj -> iq2_xxs err 0.0609
+    L39 gate_proj -> iq2_xxs err 0.0491
+    L39 up_proj -> iq2_xxs err 0.0704
+    L39 down_proj -> iq2_xxs err 0.0620
+    L40 gate_proj -> iq2_xxs err 0.0455
+    L40 up_proj -> iq2_xxs err 0.0709
+    L40 down_proj -> iq2_xxs err 0.0604
+    L41 gate_proj -> iq2_xxs err 0.0491
+    L41 up_proj -> iq2_xxs err 0.0703
+    L41 down_proj -> iq2_xxs err 0.0623
+    L42 gate_proj -> iq2_xxs err 0.0457
+    L42 up_proj -> iq2_xxs err 0.0670
+    L42 down_proj -> iq2_xxs err 0.0608
+    L43 gate_proj -> iq2_xxs err 0.0446
+    L43 up_proj -> iq2_xxs err 0.0685
+    L43 down_proj -> iq2_xxs err 0.0619
+    L44 gate_proj -> iq2_xxs err 0.0432
+    L44 up_proj -> iq2_xxs err 0.0676
+    L44 down_proj -> iq2_xxs err 0.0613
+    L45 gate_proj -> iq2_xxs err 0.0447
+    L45 up_proj -> iq2_xxs err 0.0678
+    L45 down_proj -> iq2_xxs err 0.0623
+    L46 gate_proj -> iq2_xxs err 0.0432
+    L46 up_proj -> iq2_xxs err 0.0657
+    L46 down_proj -> iq2_xxs err 0.0597
+    L47 gate_proj -> iq2_xxs err 0.0429
+    L47 up_proj -> iq2_xxs err 0.0658
+    L47 down_proj -> iq2_xxs err 0.0579
+    L48 gate_proj -> iq2_xxs err 0.0425
+    L48 up_proj -> iq2_xxs err 0.0645
+    L48 down_proj -> iq2_xxs err 0.0583
+    L49 gate_proj -> iq2_xxs err 0.0420
+    L49 up_proj -> iq2_xxs err 0.0627
+    L49 down_proj -> iq2_xxs err 0.0548
+    L50 gate_proj -> iq2_xxs err 0.0368
+    L50 up_proj -> iq2_xxs err 0.0578
+    L50 down_proj -> iq2_xxs err 0.0516
+    L51 gate_proj -> iq2_xxs err 0.0408
+    L51 up_proj -> iq2_xxs err 0.0607
+    L51 down_proj -> iq2_xxs err 0.0492
+    L52 gate_proj -> iq2_xxs err 0.0426
+    L52 up_proj -> iq2_xxs err 0.0624
+    L52 down_proj -> iq2_xxs err 0.0458
+    L53 gate_proj -> iq2_xxs err 0.0461
+    L53 up_proj -> iq2_xxs err 0.0628
+    L53 down_proj -> iq2_xxs err 0.0504
+    L54 gate_proj -> iq2_xxs err 0.0438
+    L54 up_proj -> iq2_xxs err 0.0614
+    L54 down_proj -> iq2_xxs err 0.0351
+    L55 gate_proj -> iq2_xxs err 0.0462
+    L55 up_proj -> iq2_xxs err 0.0633
+    L55 down_proj -> iq2_xxs err 0.0460
+    L56 gate_proj -> iq2_xxs err 0.0480
+    L56 up_proj -> iq2_xxs err 0.0644
+    L56 down_proj -> iq2_xxs err 0.0487
+    L57 gate_proj -> iq2_xxs err 0.0485
+    L57 up_proj -> iq2_xxs err 0.0656
+    L57 down_proj -> iq2_xxs err 0.0477
+    L58 gate_proj -> iq2_xxs err 0.0484
+    L58 up_proj -> iq2_xxs err 0.0660
+    L58 down_proj -> iq2_xxs err 0.0283
+    L59 gate_proj -> iq2_xxs err 0.0488
+    L59 up_proj -> iq2_xxs err 0.0649
+    L59 down_proj -> iq2_xxs err 0.0341
+    L60 gate_proj -> iq2_xxs err 0.0465
+    L60 up_proj -> iq2_xxs err 0.0628
+    L60 down_proj -> iq2_xxs err 0.0402
+    L61 gate_proj -> iq2_xxs err 0.0457
+    L61 up_proj -> iq2_xxs err 0.0619
+    L61 down_proj -> iq2_xxs err 0.0352
+    L62 gate_proj -> iq2_xxs err 0.0493
+    L62 up_proj -> iq2_xxs err 0.0601
+    L62 down_proj -> iq2_xxs err 0.0298
+    L63 gate_proj -> iq2_xxs err 0.0527
+    L63 up_proj -> iq2_xxs err 0.0604
+    L63 down_proj -> iq2_xxs err 0.0160
+  bpw 2.0625 mean_error 0.0585
+  accuracy 0.7300 (146/200)
+[arm] dense_iq3
+Fetching 18 files:   0%|          | 0/18 [00:00<?, ?it/s]Fetching 18 files: 100%|██████████| 18/18 [00:00<00:00, 3391.32it/s]
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<12:46,  1.11it/s]Loading weights:   3%|▎         | 27/851 [00:01<00:23, 35.46it/s]Loading weights:   5%|▍         | 41/851 [00:01<00:16, 49.67it/s]Loading weights:   6%|▌         | 53/851 [00:01<00:13, 58.09it/s]Loading weights:   8%|▊         | 66/851 [00:01<00:12, 61.78it/s]Loading weights:   9%|▉         | 80/851 [00:01<00:10, 74.78it/s]Loading weights:  11%|█         | 94/851 [00:01<00:08, 85.87it/s]Loading weights:  12%|█▏        | 105/851 [00:01<00:08, 84.53it/s]Loading weights:  14%|█▍        | 119/851 [00:01<00:07, 93.39it/s]Loading weights:  16%|█▌        | 133/851 [00:02<00:07, 96.84it/s]Loading weights:  17%|█▋        | 144/851 [00:02<00:07, 99.22it/s]Loading weights:  18%|█▊        | 155/851 [00:02<00:07, 93.09it/s]Loading weights:  20%|██        | 171/851 [00:02<00:06, 105.69it/s]Loading weights:  22%|██▏       | 183/851 [00:02<00:06, 105.12it/s]Loading weights:  23%|██▎       | 194/851 [00:02<00:06, 103.47it/s]Loading weights:  24%|██▍       | 205/851 [00:02<00:07, 86.05it/s] Loading weights:  25%|██▌       | 215/851 [00:02<00:07, 86.39it/s]Loading weights:  28%|██▊       | 235/851 [00:03<00:05, 110.74it/s]Loading weights:  29%|██▉       | 249/851 [00:03<00:05, 108.96it/s]Loading weights:  31%|███       | 261/851 [00:03<00:05, 99.38it/s] Loading weights:  33%|███▎      | 278/851 [00:03<00:05, 103.18it/s]Loading weights:  34%|███▍      | 292/851 [00:03<00:05, 105.18it/s]Loading weights:  36%|███▌      | 303/851 [00:03<00:05, 102.41it/s]Loading weights:  37%|███▋      | 314/851 [00:03<00:06, 88.63it/s] Loading weights:  39%|███▉      | 331/851 [00:04<00:04, 104.83it/s]Loading weights:  41%|████      | 345/851 [00:04<00:04, 104.83it/s]Loading weights:  42%|████▏     | 359/851 [00:04<00:04, 110.26it/s]Loading weights:  44%|████▎     | 371/851 [00:04<00:04, 103.29it/s]Loading weights:  45%|████▌     | 384/851 [00:04<00:04, 96.68it/s] Loading weights:  47%|████▋     | 398/851 [00:04<00:04, 100.69it/s]Loading weights:  48%|████▊     | 412/851 [00:04<00:04, 107.06it/s]Loading weights:  50%|████▉     | 423/851 [00:04<00:04, 94.41it/s] Loading weights:  51%|█████▏    | 437/851 [00:05<00:04, 98.22it/s]Loading weights:  53%|█████▎    | 451/851 [00:05<00:03, 104.37it/s]Loading weights:  55%|█████▍    | 465/851 [00:05<00:03, 106.26it/s]Loading weights:  56%|█████▌    | 476/851 [00:05<00:03, 101.65it/s]Loading weights:  58%|█████▊    | 490/851 [00:05<00:03, 102.08it/s]Loading weights:  59%|█████▉    | 504/851 [00:05<00:03, 104.55it/s]Loading weights:  61%|██████    | 515/851 [00:05<00:03, 102.63it/s]Loading weights:  62%|██████▏   | 526/851 [00:06<00:03, 89.29it/s] Loading weights:  64%|██████▍   | 543/851 [00:06<00:02, 106.85it/s]Loading weights:  65%|██████▌   | 556/851 [00:06<00:02, 107.21it/s]Loading weights:  67%|██████▋   | 568/851 [00:06<00:02, 108.52it/s]Loading weights:  68%|██████▊   | 580/851 [00:06<00:02, 90.85it/s] Loading weights:  70%|███████   | 596/851 [00:06<00:02, 101.83it/s]Loading weights:  72%|███████▏  | 610/851 [00:06<00:02, 102.03it/s]Loading weights:  73%|███████▎  | 624/851 [00:06<00:02, 106.42it/s]Loading weights:  75%|███████▍  | 635/851 [00:07<00:02, 100.30it/s]Loading weights:  76%|███████▋  | 649/851 [00:07<00:02, 100.36it/s]Loading weights:  78%|███████▊  | 663/851 [00:07<00:01, 101.43it/s]Loading weights:  80%|███████▉  | 677/851 [00:07<00:01, 107.00it/s]Loading weights:  81%|████████  | 688/851 [00:07<00:01, 93.08it/s] Loading weights:  82%|████████▏ | 702/851 [00:07<00:01, 99.37it/s]Loading weights:  84%|████████▍ | 716/851 [00:07<00:01, 104.76it/s]Loading weights:  86%|████████▌ | 730/851 [00:07<00:01, 105.48it/s]Loading weights:  87%|████████▋ | 741/851 [00:08<00:01, 92.01it/s] Loading weights:  89%|████████▊ | 755/851 [00:08<00:00, 102.00it/s]Loading weights:  90%|█████████ | 769/851 [00:08<00:00, 103.68it/s]Loading weights:  92%|█████████▏| 780/851 [00:08<00:00, 104.68it/s]Loading weights:  93%|█████████▎| 791/851 [00:08<00:00, 92.96it/s] Loading weights:  95%|█████████▍| 808/851 [00:08<00:00, 106.89it/s]Loading weights:  97%|█████████▋| 822/851 [00:08<00:00, 106.89it/s]Loading weights:  98%|█████████▊| 836/851 [00:09<00:00, 106.45it/s]Loading weights: 100%|█████████▉| 847/851 [00:09<00:00, 96.69it/s] Loading weights: 100%|██████████| 851/851 [00:09<00:00, 92.95it/s]
+    L00 gate_proj -> iq3_xxs err 0.0073
+    L00 up_proj -> iq3_xxs err 0.0076
+    L00 down_proj -> iq3_xxs err 0.0039
+    L01 gate_proj -> iq3_xxs err 0.0079
+    L01 up_proj -> iq3_xxs err 0.0081
+    L01 down_proj -> iq3_xxs err 0.0067
+    L02 gate_proj -> iq3_xxs err 0.0090
+    L02 up_proj -> iq3_xxs err 0.0092
+    L02 down_proj -> iq3_xxs err 0.0031
+    L03 gate_proj -> iq3_xxs err 0.0089
+    L03 up_proj -> iq3_xxs err 0.0092
+    L03 down_proj -> iq3_xxs err 0.0062
+    L04 gate_proj -> iq3_xxs err 0.0089
+    L04 up_proj -> iq3_xxs err 0.0092
+    L04 down_proj -> iq3_xxs err 0.0070
+    L05 gate_proj -> iq3_xxs err 0.0090
+    L05 up_proj -> iq3_xxs err 0.0092
+    L05 down_proj -> iq3_xxs err 0.0078
+    L06 gate_proj -> iq3_xxs err 0.0086
+    L06 up_proj -> iq3_xxs err 0.0088
+    L06 down_proj -> iq3_xxs err 0.0073
+    L07 gate_proj -> iq3_xxs err 0.0089
+    L07 up_proj -> iq3_xxs err 0.0093
+    L07 down_proj -> iq3_xxs err 0.0077
+    L08 gate_proj -> iq3_xxs err 0.0090
+    L08 up_proj -> iq3_xxs err 0.0094
+    L08 down_proj -> iq3_xxs err 0.0076
+    L09 gate_proj -> iq3_xxs err 0.0090
+    L09 up_proj -> iq3_xxs err 0.0093
+    L09 down_proj -> iq3_xxs err 0.0079
+    L10 gate_proj -> iq3_xxs err 0.0087
+    L10 up_proj -> iq3_xxs err 0.0091
+    L10 down_proj -> iq3_xxs err 0.0080
+    L11 gate_proj -> iq3_xxs err 0.0087
+    L11 up_proj -> iq3_xxs err 0.0092
+    L11 down_proj -> iq3_xxs err 0.0080
+    L12 gate_proj -> iq3_xxs err 0.0088
+    L12 up_proj -> iq3_xxs err 0.0092
+    L12 down_proj -> iq3_xxs err 0.0081
+    L13 gate_proj -> iq3_xxs err 0.0089
+    L13 up_proj -> iq3_xxs err 0.0092
+    L13 down_proj -> iq3_xxs err 0.0082
+    L14 gate_proj -> iq3_xxs err 0.0089
+    L14 up_proj -> iq3_xxs err 0.0092
+    L14 down_proj -> iq3_xxs err 0.0082
+    L15 gate_proj -> iq3_xxs err 0.0087
+    L15 up_proj -> iq3_xxs err 0.0092
+    L15 down_proj -> iq3_xxs err 0.0082
+    L16 gate_proj -> iq3_xxs err 0.0085
+    L16 up_proj -> iq3_xxs err 0.0090
+    L16 down_proj -> iq3_xxs err 0.0082
+    L17 gate_proj -> iq3_xxs err 0.0084
+    L17 up_proj -> iq3_xxs err 0.0090
+    L17 down_proj -> iq3_xxs err 0.0081
+    L18 gate_proj -> iq3_xxs err 0.0077
+    L18 up_proj -> iq3_xxs err 0.0087
+    L18 down_proj -> iq3_xxs err 0.0076
+    L19 gate_proj -> iq3_xxs err 0.0079
+    L19 up_proj -> iq3_xxs err 0.0091
+    L19 down_proj -> iq3_xxs err 0.0079
+    L20 gate_proj -> iq3_xxs err 0.0084
+    L20 up_proj -> iq3_xxs err 0.0093
+    L20 down_proj -> iq3_xxs err 0.0074
+    L21 gate_proj -> iq3_xxs err 0.0086
+    L21 up_proj -> iq3_xxs err 0.0094
+    L21 down_proj -> iq3_xxs err 0.0079
+    L22 gate_proj -> iq3_xxs err 0.0065
+    L22 up_proj -> iq3_xxs err 0.0094
+    L22 down_proj -> iq3_xxs err 0.0079
+    L23 gate_proj -> iq3_xxs err 0.0082
+    L23 up_proj -> iq3_xxs err 0.0095
+    L23 down_proj -> iq3_xxs err 0.0079
+    L24 gate_proj -> iq3_xxs err 0.0080
+    L24 up_proj -> iq3_xxs err 0.0095
+    L24 down_proj -> iq3_xxs err 0.0075
+    L25 gate_proj -> iq3_xxs err 0.0078
+    L25 up_proj -> iq3_xxs err 0.0094
+    L25 down_proj -> iq3_xxs err 0.0082
+    L26 gate_proj -> iq3_xxs err 0.0071
+    L26 up_proj -> iq3_xxs err 0.0091
+    L26 down_proj -> iq3_xxs err 0.0082
+    L27 gate_proj -> iq3_xxs err 0.0067
+    L27 up_proj -> iq3_xxs err 0.0092
+    L27 down_proj -> iq3_xxs err 0.0085
+    L28 gate_proj -> iq3_xxs err 0.0065
+    L28 up_proj -> iq3_xxs err 0.0091
+    L28 down_proj -> iq3_xxs err 0.0085
+    L29 gate_proj -> iq3_xxs err 0.0066
+    L29 up_proj -> iq3_xxs err 0.0091
+    L29 down_proj -> iq3_xxs err 0.0087
+    L30 gate_proj -> iq3_xxs err 0.0062
+    L30 up_proj -> iq3_xxs err 0.0088
+    L30 down_proj -> iq3_xxs err 0.0086
+    L31 gate_proj -> iq3_xxs err 0.0062
+    L31 up_proj -> iq3_xxs err 0.0089
+    L31 down_proj -> iq3_xxs err 0.0086
+    L32 gate_proj -> iq3_xxs err 0.0061
+    L32 up_proj -> iq3_xxs err 0.0089
+    L32 down_proj -> iq3_xxs err 0.0087
+    L33 gate_proj -> iq3_xxs err 0.0060
+    L33 up_proj -> iq3_xxs err 0.0089
+    L33 down_proj -> iq3_xxs err 0.0086
+    L34 gate_proj -> iq3_xxs err 0.0050
+    L34 up_proj -> iq3_xxs err 0.0085
+    L34 down_proj -> iq3_xxs err 0.0083
+    L35 gate_proj -> iq3_xxs err 0.0054
+    L35 up_proj -> iq3_xxs err 0.0090
+    L35 down_proj -> iq3_xxs err 0.0077
+    L36 gate_proj -> iq3_xxs err 0.0064
+    L36 up_proj -> iq3_xxs err 0.0092
+    L36 down_proj -> iq3_xxs err 0.0076
+    L37 gate_proj -> iq3_xxs err 0.0071
+    L37 up_proj -> iq3_xxs err 0.0092
+    L37 down_proj -> iq3_xxs err 0.0082
+    L38 gate_proj -> iq3_xxs err 0.0052
+    L38 up_proj -> iq3_xxs err 0.0093
+    L38 down_proj -> iq3_xxs err 0.0080
+    L39 gate_proj -> iq3_xxs err 0.0064
+    L39 up_proj -> iq3_xxs err 0.0093
+    L39 down_proj -> iq3_xxs err 0.0081
+    L40 gate_proj -> iq3_xxs err 0.0060
+    L40 up_proj -> iq3_xxs err 0.0094
+    L40 down_proj -> iq3_xxs err 0.0079
+    L41 gate_proj -> iq3_xxs err 0.0065
+    L41 up_proj -> iq3_xxs err 0.0093
+    L41 down_proj -> iq3_xxs err 0.0082
+    L42 gate_proj -> iq3_xxs err 0.0060
+    L42 up_proj -> iq3_xxs err 0.0089
+    L42 down_proj -> iq3_xxs err 0.0080
+    L43 gate_proj -> iq3_xxs err 0.0059
+    L43 up_proj -> iq3_xxs err 0.0091
+    L43 down_proj -> iq3_xxs err 0.0081
+    L44 gate_proj -> iq3_xxs err 0.0057
+    L44 up_proj -> iq3_xxs err 0.0090
+    L44 down_proj -> iq3_xxs err 0.0081
+    L45 gate_proj -> iq3_xxs err 0.0059
+    L45 up_proj -> iq3_xxs err 0.0090
+    L45 down_proj -> iq3_xxs err 0.0082
+    L46 gate_proj -> iq3_xxs err 0.0057
+    L46 up_proj -> iq3_xxs err 0.0087
+    L46 down_proj -> iq3_xxs err 0.0078
+    L47 gate_proj -> iq3_xxs err 0.0056
+    L47 up_proj -> iq3_xxs err 0.0087
+    L47 down_proj -> iq3_xxs err 0.0076
+    L48 gate_proj -> iq3_xxs err 0.0056
+    L48 up_proj -> iq3_xxs err 0.0085
+    L48 down_proj -> iq3_xxs err 0.0076
+    L49 gate_proj -> iq3_xxs err 0.0055
+    L49 up_proj -> iq3_xxs err 0.0083
+    L49 down_proj -> iq3_xxs err 0.0072
+    L50 gate_proj -> iq3_xxs err 0.0048
+    L50 up_proj -> iq3_xxs err 0.0076
+    L50 down_proj -> iq3_xxs err 0.0067
+    L51 gate_proj -> iq3_xxs err 0.0053
+    L51 up_proj -> iq3_xxs err 0.0080
+    L51 down_proj -> iq3_xxs err 0.0064
+    L52 gate_proj -> iq3_xxs err 0.0056
+    L52 up_proj -> iq3_xxs err 0.0082
+    L52 down_proj -> iq3_xxs err 0.0059
+    L53 gate_proj -> iq3_xxs err 0.0060
+    L53 up_proj -> iq3_xxs err 0.0082
+    L53 down_proj -> iq3_xxs err 0.0065
+    L54 gate_proj -> iq3_xxs err 0.0057
+    L54 up_proj -> iq3_xxs err 0.0081
+    L54 down_proj -> iq3_xxs err 0.0045
+    L55 gate_proj -> iq3_xxs err 0.0060
+    L55 up_proj -> iq3_xxs err 0.0083
+    L55 down_proj -> iq3_xxs err 0.0060
+    L56 gate_proj -> iq3_xxs err 0.0063
+    L56 up_proj -> iq3_xxs err 0.0084
+    L56 down_proj -> iq3_xxs err 0.0063
+    L57 gate_proj -> iq3_xxs err 0.0063
+    L57 up_proj -> iq3_xxs err 0.0086
+    L57 down_proj -> iq3_xxs err 0.0062
+    L58 gate_proj -> iq3_xxs err 0.0063
+    L58 up_proj -> iq3_xxs err 0.0087
+    L58 down_proj -> iq3_xxs err 0.0036
+    L59 gate_proj -> iq3_xxs err 0.0064
+    L59 up_proj -> iq3_xxs err 0.0085
+    L59 down_proj -> iq3_xxs err 0.0043
+    L60 gate_proj -> iq3_xxs err 0.0061
+    L60 up_proj -> iq3_xxs err 0.0082
+    L60 down_proj -> iq3_xxs err 0.0051
+    L61 gate_proj -> iq3_xxs err 0.0060
+    L61 up_proj -> iq3_xxs err 0.0081
+    L61 down_proj -> iq3_xxs err 0.0044
+    L62 gate_proj -> iq3_xxs err 0.0065
+    L62 up_proj -> iq3_xxs err 0.0079
+    L62 down_proj -> iq3_xxs err 0.0037
+    L63 gate_proj -> iq3_xxs err 0.0069
+    L63 up_proj -> iq3_xxs err 0.0079
+    L63 down_proj -> iq3_xxs err 0.0019
+  bpw 3.0625 mean_error 0.0077
+  accuracy 0.7900 (158/200)
+[arm] dense_iq3_ref
+Fetching 18 files:   0%|          | 0/18 [00:00<?, ?it/s]Fetching 18 files: 100%|██████████| 18/18 [00:00<00:00, 4122.62it/s]
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<12:17,  1.15it/s]Loading weights:   0%|          | 2/851 [00:01<06:12,  2.28it/s]Loading weights:   3%|▎         | 27/851 [00:01<00:20, 41.09it/s]Loading weights:   5%|▍         | 41/851 [00:01<00:14, 56.86it/s]Loading weights:   6%|▌         | 52/851 [00:01<00:13, 60.18it/s]Loading weights:   8%|▊         | 66/851 [00:01<00:11, 69.91it/s]Loading weights:  10%|▉         | 81/851 [00:01<00:09, 83.66it/s]Loading weights:  11%|█         | 94/851 [00:01<00:08, 91.62it/s]Loading weights:  12%|█▏        | 105/851 [00:01<00:08, 90.80it/s]Loading weights:  14%|█▍        | 119/851 [00:02<00:08, 90.79it/s]Loading weights:  16%|█▌        | 133/851 [00:02<00:07, 99.94it/s]Loading weights:  17%|█▋        | 147/851 [00:02<00:06, 101.99it/s]Loading weights:  19%|█▊        | 158/851 [00:02<00:07, 98.97it/s] Loading weights:  20%|██        | 172/851 [00:02<00:06, 101.73it/s]Loading weights:  22%|██▏       | 184/851 [00:02<00:06, 106.30it/s]Loading weights:  23%|██▎       | 197/851 [00:02<00:05, 111.45it/s]Loading weights:  25%|██▍       | 209/851 [00:02<00:06, 92.22it/s] Loading weights:  26%|██▋       | 225/851 [00:03<00:06, 101.46it/s]Loading weights:  28%|██▊       | 239/851 [00:03<00:05, 102.23it/s]Loading weights:  30%|██▉       | 253/851 [00:03<00:05, 105.85it/s]Loading weights:  31%|███       | 264/851 [00:03<00:05, 98.24it/s] Loading weights:  33%|███▎      | 278/851 [00:03<00:05, 104.57it/s]Loading weights:  34%|███▍      | 292/851 [00:03<00:05, 105.13it/s]Loading weights:  36%|███▌      | 306/851 [00:03<00:05, 105.71it/s]Loading weights:  37%|███▋      | 317/851 [00:03<00:05, 93.99it/s] Loading weights:  39%|███▉      | 331/851 [00:04<00:05, 97.49it/s]Loading weights:  41%|████      | 345/851 [00:04<00:04, 106.43it/s]Loading weights:  42%|████▏     | 359/851 [00:04<00:05, 95.17it/s] Loading weights:  44%|████▎     | 372/851 [00:04<00:04, 98.04it/s]Loading weights:  45%|████▌     | 384/851 [00:04<00:04, 102.43it/s]Loading weights:  47%|████▋     | 398/851 [00:04<00:04, 107.23it/s]Loading weights:  48%|████▊     | 409/851 [00:04<00:04, 105.39it/s]Loading weights:  49%|████▉     | 420/851 [00:05<00:04, 87.59it/s] Loading weights:  51%|█████▏    | 437/851 [00:05<00:04, 101.55it/s]Loading weights:  53%|█████▎    | 451/851 [00:05<00:03, 101.60it/s]Loading weights:  55%|█████▍    | 465/851 [00:05<00:03, 103.36it/s]Loading weights:  56%|█████▌    | 476/851 [00:05<00:03, 100.13it/s]Loading weights:  58%|█████▊    | 490/851 [00:05<00:03, 101.87it/s]Loading weights:  59%|█████▉    | 503/851 [00:05<00:03, 107.86it/s]Loading weights:  60%|██████    | 514/851 [00:05<00:03, 103.47it/s]Loading weights:  62%|██████▏   | 525/851 [00:06<00:03, 93.53it/s] Loading weights:  64%|██████▎   | 542/851 [00:06<00:02, 111.27it/s]Loading weights:  65%|██████▌   | 556/851 [00:06<00:02, 105.86it/s]Loading weights:  67%|██████▋   | 567/851 [00:06<00:02, 100.20it/s]Loading weights:  68%|██████▊   | 578/851 [00:06<00:03, 87.73it/s] Loading weights:  70%|███████   | 596/851 [00:06<00:02, 102.28it/s]Loading weights:  72%|███████▏  | 610/851 [00:06<00:02, 107.26it/s]Loading weights:  73%|███████▎  | 623/851 [00:06<00:02, 106.80it/s]Loading weights:  75%|███████▍  | 634/851 [00:07<00:02, 91.41it/s] Loading weights:  76%|███████▋  | 649/851 [00:07<00:01, 101.88it/s]Loading weights:  78%|███████▊  | 663/851 [00:07<00:01, 99.09it/s] Loading weights:  80%|███████▉  | 677/851 [00:07<00:01, 102.94it/s]Loading weights:  81%|████████  | 688/851 [00:07<00:01, 95.51it/s] Loading weights:  82%|████████▏ | 702/851 [00:07<00:01, 93.18it/s]Loading weights:  84%|████████▍ | 716/851 [00:07<00:01, 98.73it/s]Loading weights:  86%|████████▌ | 730/851 [00:08<00:01, 99.25it/s]Loading weights:  87%|████████▋ | 741/851 [00:08<00:01, 98.46it/s]Loading weights:  89%|████████▊ | 755/851 [00:08<00:00, 104.60it/s]Loading weights:  90%|█████████ | 769/851 [00:08<00:00, 105.98it/s]Loading weights:  92%|█████████▏| 783/851 [00:08<00:00, 105.25it/s]Loading weights:  93%|█████████▎| 794/851 [00:08<00:00, 94.90it/s] Loading weights:  95%|█████████▍| 808/851 [00:08<00:00, 101.87it/s]Loading weights:  97%|█████████▋| 822/851 [00:08<00:00, 105.34it/s]Loading weights:  98%|█████████▊| 836/851 [00:09<00:00, 106.67it/s]Loading weights: 100%|█████████▉| 847/851 [00:09<00:00, 99.88it/s] Loading weights: 100%|██████████| 851/851 [00:09<00:00, 92.01it/s]
+    L00 gate_proj -> iq3_xxs_ref err 0.0268
+    L00 up_proj -> iq3_xxs_ref err 0.0276
+    L00 down_proj -> iq3_xxs_ref err 0.0163
+    L01 gate_proj -> iq3_xxs_ref err 0.0283
+    L01 up_proj -> iq3_xxs_ref err 0.0292
+    L01 down_proj -> iq3_xxs_ref err 0.0249
+    L02 gate_proj -> iq3_xxs_ref err 0.0317
+    L02 up_proj -> iq3_xxs_ref err 0.0324
+    L02 down_proj -> iq3_xxs_ref err 0.0130
+    L03 gate_proj -> iq3_xxs_ref err 0.0314
+    L03 up_proj -> iq3_xxs_ref err 0.0322
+    L03 down_proj -> iq3_xxs_ref err 0.0233
+    L04 gate_proj -> iq3_xxs_ref err 0.0314
+    L04 up_proj -> iq3_xxs_ref err 0.0325
+    L04 down_proj -> iq3_xxs_ref err 0.0253
+    L05 gate_proj -> iq3_xxs_ref err 0.0316
+    L05 up_proj -> iq3_xxs_ref err 0.0324
+    L05 down_proj -> iq3_xxs_ref err 0.0281
+    L06 gate_proj -> iq3_xxs_ref err 0.0305
+    L06 up_proj -> iq3_xxs_ref err 0.0315
+    L06 down_proj -> iq3_xxs_ref err 0.0269
+    L07 gate_proj -> iq3_xxs_ref err 0.0312
+    L07 up_proj -> iq3_xxs_ref err 0.0327
+    L07 down_proj -> iq3_xxs_ref err 0.0277
+    L08 gate_proj -> iq3_xxs_ref err 0.0315
+    L08 up_proj -> iq3_xxs_ref err 0.0328
+    L08 down_proj -> iq3_xxs_ref err 0.0275
+    L09 gate_proj -> iq3_xxs_ref err 0.0315
+    L09 up_proj -> iq3_xxs_ref err 0.0327
+    L09 down_proj -> iq3_xxs_ref err 0.0283
+    L10 gate_proj -> iq3_xxs_ref err 0.0307
+    L10 up_proj -> iq3_xxs_ref err 0.0321
+    L10 down_proj -> iq3_xxs_ref err 0.0287
+    L11 gate_proj -> iq3_xxs_ref err 0.0308
+    L11 up_proj -> iq3_xxs_ref err 0.0324
+    L11 down_proj -> iq3_xxs_ref err 0.0285
+    L12 gate_proj -> iq3_xxs_ref err 0.0309
+    L12 up_proj -> iq3_xxs_ref err 0.0323
+    L12 down_proj -> iq3_xxs_ref err 0.0290
+    L13 gate_proj -> iq3_xxs_ref err 0.0312
+    L13 up_proj -> iq3_xxs_ref err 0.0325
+    L13 down_proj -> iq3_xxs_ref err 0.0293
+    L14 gate_proj -> iq3_xxs_ref err 0.0314
+    L14 up_proj -> iq3_xxs_ref err 0.0325
+    L14 down_proj -> iq3_xxs_ref err 0.0293
+    L15 gate_proj -> iq3_xxs_ref err 0.0308
+    L15 up_proj -> iq3_xxs_ref err 0.0324
+    L15 down_proj -> iq3_xxs_ref err 0.0294
+    L16 gate_proj -> iq3_xxs_ref err 0.0300
+    L16 up_proj -> iq3_xxs_ref err 0.0319
+    L16 down_proj -> iq3_xxs_ref err 0.0291
+    L17 gate_proj -> iq3_xxs_ref err 0.0298
+    L17 up_proj -> iq3_xxs_ref err 0.0318
+    L17 down_proj -> iq3_xxs_ref err 0.0292
+    L18 gate_proj -> iq3_xxs_ref err 0.0279
+    L18 up_proj -> iq3_xxs_ref err 0.0310
+    L18 down_proj -> iq3_xxs_ref err 0.0278
+    L19 gate_proj -> iq3_xxs_ref err 0.0283
+    L19 up_proj -> iq3_xxs_ref err 0.0322
+    L19 down_proj -> iq3_xxs_ref err 0.0283
+    L20 gate_proj -> iq3_xxs_ref err 0.0297
+    L20 up_proj -> iq3_xxs_ref err 0.0329
+    L20 down_proj -> iq3_xxs_ref err 0.0270
+    L21 gate_proj -> iq3_xxs_ref err 0.0304
+    L21 up_proj -> iq3_xxs_ref err 0.0330
+    L21 down_proj -> iq3_xxs_ref err 0.0283
+    L22 gate_proj -> iq3_xxs_ref err 0.0235
+    L22 up_proj -> iq3_xxs_ref err 0.0333
+    L22 down_proj -> iq3_xxs_ref err 0.0285
+    L23 gate_proj -> iq3_xxs_ref err 0.0291
+    L23 up_proj -> iq3_xxs_ref err 0.0333
+    L23 down_proj -> iq3_xxs_ref err 0.0282
+    L24 gate_proj -> iq3_xxs_ref err 0.0282
+    L24 up_proj -> iq3_xxs_ref err 0.0335
+    L24 down_proj -> iq3_xxs_ref err 0.0272
+    L25 gate_proj -> iq3_xxs_ref err 0.0278
+    L25 up_proj -> iq3_xxs_ref err 0.0334
+    L25 down_proj -> iq3_xxs_ref err 0.0293
+    L26 gate_proj -> iq3_xxs_ref err 0.0253
+    L26 up_proj -> iq3_xxs_ref err 0.0325
+    L26 down_proj -> iq3_xxs_ref err 0.0294
+    L27 gate_proj -> iq3_xxs_ref err 0.0241
+    L27 up_proj -> iq3_xxs_ref err 0.0330
+    L27 down_proj -> iq3_xxs_ref err 0.0303
+    L28 gate_proj -> iq3_xxs_ref err 0.0234
+    L28 up_proj -> iq3_xxs_ref err 0.0326
+    L28 down_proj -> iq3_xxs_ref err 0.0304
+    L29 gate_proj -> iq3_xxs_ref err 0.0237
+    L29 up_proj -> iq3_xxs_ref err 0.0325
+    L29 down_proj -> iq3_xxs_ref err 0.0308
+    L30 gate_proj -> iq3_xxs_ref err 0.0224
+    L30 up_proj -> iq3_xxs_ref err 0.0318
+    L30 down_proj -> iq3_xxs_ref err 0.0306
+    L31 gate_proj -> iq3_xxs_ref err 0.0226
+    L31 up_proj -> iq3_xxs_ref err 0.0320
+    L31 down_proj -> iq3_xxs_ref err 0.0307
+    L32 gate_proj -> iq3_xxs_ref err 0.0220
+    L32 up_proj -> iq3_xxs_ref err 0.0320
+    L32 down_proj -> iq3_xxs_ref err 0.0310
+    L33 gate_proj -> iq3_xxs_ref err 0.0217
+    L33 up_proj -> iq3_xxs_ref err 0.0321
+    L33 down_proj -> iq3_xxs_ref err 0.0306
+    L34 gate_proj -> iq3_xxs_ref err 0.0187
+    L34 up_proj -> iq3_xxs_ref err 0.0311
+    L34 down_proj -> iq3_xxs_ref err 0.0299
+    L35 gate_proj -> iq3_xxs_ref err 0.0198
+    L35 up_proj -> iq3_xxs_ref err 0.0323
+    L35 down_proj -> iq3_xxs_ref err 0.0280
+    L36 gate_proj -> iq3_xxs_ref err 0.0231
+    L36 up_proj -> iq3_xxs_ref err 0.0328
+    L36 down_proj -> iq3_xxs_ref err 0.0275
+    L37 gate_proj -> iq3_xxs_ref err 0.0254
+    L37 up_proj -> iq3_xxs_ref err 0.0327
+    L37 down_proj -> iq3_xxs_ref err 0.0293
+    L38 gate_proj -> iq3_xxs_ref err 0.0191
+    L38 up_proj -> iq3_xxs_ref err 0.0333
+    L38 down_proj -> iq3_xxs_ref err 0.0287
+    L39 gate_proj -> iq3_xxs_ref err 0.0232
+    L39 up_proj -> iq3_xxs_ref err 0.0332
+    L39 down_proj -> iq3_xxs_ref err 0.0290
+    L40 gate_proj -> iq3_xxs_ref err 0.0216
+    L40 up_proj -> iq3_xxs_ref err 0.0337
+    L40 down_proj -> iq3_xxs_ref err 0.0284
+    L41 gate_proj -> iq3_xxs_ref err 0.0232
+    L41 up_proj -> iq3_xxs_ref err 0.0334
+    L41 down_proj -> iq3_xxs_ref err 0.0293
+    L42 gate_proj -> iq3_xxs_ref err 0.0218
+    L42 up_proj -> iq3_xxs_ref err 0.0321
+    L42 down_proj -> iq3_xxs_ref err 0.0287
+    L43 gate_proj -> iq3_xxs_ref err 0.0213
+    L43 up_proj -> iq3_xxs_ref err 0.0326
+    L43 down_proj -> iq3_xxs_ref err 0.0292
+    L44 gate_proj -> iq3_xxs_ref err 0.0208
+    L44 up_proj -> iq3_xxs_ref err 0.0323
+    L44 down_proj -> iq3_xxs_ref err 0.0290
+    L45 gate_proj -> iq3_xxs_ref err 0.0214
+    L45 up_proj -> iq3_xxs_ref err 0.0323
+    L45 down_proj -> iq3_xxs_ref err 0.0293
+    L46 gate_proj -> iq3_xxs_ref err 0.0208
+    L46 up_proj -> iq3_xxs_ref err 0.0315
+    L46 down_proj -> iq3_xxs_ref err 0.0283
+    L47 gate_proj -> iq3_xxs_ref err 0.0207
+    L47 up_proj -> iq3_xxs_ref err 0.0314
+    L47 down_proj -> iq3_xxs_ref err 0.0276
+    L48 gate_proj -> iq3_xxs_ref err 0.0207
+    L48 up_proj -> iq3_xxs_ref err 0.0309
+    L48 down_proj -> iq3_xxs_ref err 0.0279
+    L49 gate_proj -> iq3_xxs_ref err 0.0207
+    L49 up_proj -> iq3_xxs_ref err 0.0301
+    L49 down_proj -> iq3_xxs_ref err 0.0265
+    L50 gate_proj -> iq3_xxs_ref err 0.0187
+    L50 up_proj -> iq3_xxs_ref err 0.0282
+    L50 down_proj -> iq3_xxs_ref err 0.0255
+    L51 gate_proj -> iq3_xxs_ref err 0.0203
+    L51 up_proj -> iq3_xxs_ref err 0.0292
+    L51 down_proj -> iq3_xxs_ref err 0.0243
+    L52 gate_proj -> iq3_xxs_ref err 0.0210
+    L52 up_proj -> iq3_xxs_ref err 0.0297
+    L52 down_proj -> iq3_xxs_ref err 0.0225
+    L53 gate_proj -> iq3_xxs_ref err 0.0225
+    L53 up_proj -> iq3_xxs_ref err 0.0298
+    L53 down_proj -> iq3_xxs_ref err 0.0245
+    L54 gate_proj -> iq3_xxs_ref err 0.0214
+    L54 up_proj -> iq3_xxs_ref err 0.0292
+    L54 down_proj -> iq3_xxs_ref err 0.0180
+    L55 gate_proj -> iq3_xxs_ref err 0.0223
+    L55 up_proj -> iq3_xxs_ref err 0.0298
+    L55 down_proj -> iq3_xxs_ref err 0.0226
+    L56 gate_proj -> iq3_xxs_ref err 0.0230
+    L56 up_proj -> iq3_xxs_ref err 0.0302
+    L56 down_proj -> iq3_xxs_ref err 0.0237
+    L57 gate_proj -> iq3_xxs_ref err 0.0232
+    L57 up_proj -> iq3_xxs_ref err 0.0307
+    L57 down_proj -> iq3_xxs_ref err 0.0233
+    L58 gate_proj -> iq3_xxs_ref err 0.0231
+    L58 up_proj -> iq3_xxs_ref err 0.0310
+    L58 down_proj -> iq3_xxs_ref err 0.0151
+    L59 gate_proj -> iq3_xxs_ref err 0.0234
+    L59 up_proj -> iq3_xxs_ref err 0.0305
+    L59 down_proj -> iq3_xxs_ref err 0.0175
+    L60 gate_proj -> iq3_xxs_ref err 0.0225
+    L60 up_proj -> iq3_xxs_ref err 0.0296
+    L60 down_proj -> iq3_xxs_ref err 0.0203
+    L61 gate_proj -> iq3_xxs_ref err 0.0222
+    L61 up_proj -> iq3_xxs_ref err 0.0293
+    L61 down_proj -> iq3_xxs_ref err 0.0183
+    L62 gate_proj -> iq3_xxs_ref err 0.0238
+    L62 up_proj -> iq3_xxs_ref err 0.0285
+    L62 down_proj -> iq3_xxs_ref err 0.0162
+    L63 gate_proj -> iq3_xxs_ref err 0.0254
+    L63 up_proj -> iq3_xxs_ref err 0.0286
+    L63 down_proj -> iq3_xxs_ref err 0.0110
+  bpw 3.0625 mean_error 0.0277
+  accuracy 0.7700 (154/200)
+
+dense          0.8050 (161/200)
+dense_iq2      0.7300 (146/200)
+dense_iq3      0.7900 (158/200)
+dense_iq3_ref  0.7700 (154/200)
+
+dense_iq2_vs_dense_iq3       delta=-0.0600 CI[-0.1050, -0.0200] p=0.0118 SIGNIFICANT
+dense_iq2_vs_dense_iq3_ref   delta=-0.0400 CI[-0.0800, +0.0000] p=0.0963 not significant
+dense_iq3_vs_dense_iq3_ref   delta=+0.0200 CI[-0.0150, +0.0600] p=0.4240 not significant
+
+wrote artifacts/qwen38_reference.json
+SWEEP_DONE

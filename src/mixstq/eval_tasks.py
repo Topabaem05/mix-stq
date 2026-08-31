@@ -162,6 +162,9 @@ def build_plans(low_layers):
     def dense_iq3s(_layer, _attribute):
         return "iq3_s"
 
+    def dense_iq3_ref(_layer, _attribute):
+        return "iq3_xxs_ref"
+
     def dense_fp16(_layer, _attribute):
         return "fp16"
 
@@ -180,6 +183,7 @@ def build_plans(low_layers):
         "dense_iq2": dense_iq2,
         "dense_iq3": dense_iq3,
         "dense_iq3s": dense_iq3s,
+        "dense_iq3_ref": dense_iq3_ref,
         "dense_fp16": dense_fp16,
     }
 
@@ -193,6 +197,7 @@ def main() -> int:
     parser.add_argument("--arc", type=int, default=60)
     parser.add_argument("--low-layers", type=int, default=6)
     parser.add_argument("--arms", default="dense,mixed_stq,mixed_ltc")
+    parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -224,7 +229,7 @@ def main() -> int:
         model = AutoModelForCausalLM.from_pretrained(
             args.model,
             revision=args.revision,
-            dtype=torch.float16,
+            dtype=getattr(torch, args.dtype),
             low_cpu_mem_usage=True,
             device_map={"": device},
         )
@@ -250,6 +255,7 @@ def main() -> int:
             torch.cuda.empty_cache()
 
     report = compare(results, "dense")
+    report["correct_vectors"] = results
     report["items_detail"] = [
         {"task": i["task"], "subject": i["subject"]} for i in items
     ]
@@ -259,6 +265,7 @@ def main() -> int:
         "low_layers": args.low_layers,
         "mmlu": args.mmlu,
         "arc": args.arc,
+        "dtype": args.dtype,
     }
     Path(args.out).write_text(json.dumps(report, indent=1), encoding="utf-8")
 

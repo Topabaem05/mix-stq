@@ -4,6 +4,12 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.workflow/
+.omo.ouroboros/
+.superpower/
+.superpowers/
+test-results/
+coverage/
 
 # compiled reference binaries
 ltc_dequant

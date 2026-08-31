@@ -57,7 +57,7 @@ def compare(records: dict[str, list[int]], baseline: str) -> dict:
             "correct": sum(correct),
             "accuracy": sum(correct) / len(correct) if correct else 0.0,
         }
-    names = [n for n in records if n != baseline]
+    names = [baseline] + [name for name in records if name != baseline]
     for i, first in enumerate(names):
         for second in names[i + 1 :]:
             a = records[first]
@@ -108,4 +108,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

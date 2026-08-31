@@ -46,12 +46,13 @@ def collect(model_id: str, revision: str, samples: int, seq_len: int, out: Path,
     per_domain = max(samples // max(len(domains), 1), 1)
     for domain in domains:
         if domain == "wiki":
-            stream = load_dataset("wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
+            stream = load_dataset(
+                "Salesforce/wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
             field = "text"
         elif domain == "code":
-            stream = load_dataset("codeparrot/github-code", split="train", streaming=True,
-                                  languages=["Python"], licenses=["mit"], trust_remote_code=True)
-            field = "code"
+            stream = load_dataset(
+                "code-search-net/code_search_net", "python", split="train", streaming=True)
+            field = "whole_func_string"
         elif domain == "chat":
             stream = load_dataset("HuggingFaceH4/ultrachat_200k", split="train_sft", streaming=True)
             field = "prompt"
@@ -124,4 +125,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -188,7 +188,8 @@ def apply_plan(model, importance, plan, device):
                 layers_position = parts.index("layers")
             except ValueError:
                 continue
-            if (parts[:layers_position] != ["model", "language_model"]
+            prefix = parts[:layers_position]
+            if (prefix not in (["model"], ["model", "language_model"])
                     or len(parts) != layers_position + 4
                     or parts[layers_position + 2] != "mlp"
                     or parts[layers_position + 3] not in ("gate_proj", "up_proj", "down_proj")):

@@ -1,0 +1,1358 @@
+{
+ "model_id": "Qwen/Qwen3.8-27B",
+ "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+ "domains": [
+  "wiki",
+  "code",
+  "chat"
+ ],
+ "documents": 96,
+ "observed_tokens": 23553,
+ "sequence_length": 2048,
+ "tensors": {
+  "model.layers.0.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.008229858241975307,
+   "max": 0.942301869392395,
+   "min": 0.0033171873074024916
+  },
+  "model.layers.0.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.008229858241975307,
+   "max": 0.942301869392395,
+   "min": 0.0033171873074024916
+  },
+  "model.layers.0.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 6.765004945918918e-05,
+   "max": 0.026774173602461815,
+   "min": 3.0271592095232336e-06
+  },
+  "model.layers.1.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.013854609802365303,
+   "max": 1.1391206979751587,
+   "min": 0.0068188742734491825
+  },
+  "model.layers.1.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.013854609802365303,
+   "max": 1.1391206979751587,
+   "min": 0.0068188742734491825
+  },
+  "model.layers.1.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 9.85582810244523e-05,
+   "max": 0.008081678301095963,
+   "min": 1.2599003639479633e-05
+  },
+  "model.layers.2.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.020942313596606255,
+   "max": 3.7490224838256836,
+   "min": 0.012764989398419857
+  },
+  "model.layers.2.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.020942313596606255,
+   "max": 3.7490224838256836,
+   "min": 0.012764989398419857
+  },
+  "model.layers.2.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.00037259983946569264,
+   "max": 1.4958839416503906,
+   "min": 4.112546957912855e-05
+  },
+  "model.layers.3.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.024004165083169937,
+   "max": 3.086033344268799,
+   "min": 0.015040487982332706
+  },
+  "model.layers.3.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.024004165083169937,
+   "max": 3.086033344268799,
+   "min": 0.015040487982332706
+  },
+  "model.layers.3.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0002861123066395521,
+   "max": 0.06769411265850067,
+   "min": 5.559779310715385e-05
+  },
+  "model.layers.4.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.029734577983617783,
+   "max": 3.439347505569458,
+   "min": 0.019293952733278275
+  },
+  "model.layers.4.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.029734577983617783,
+   "max": 3.439347505569458,
+   "min": 0.019293952733278275
+  },
+  "model.layers.4.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.00035833881702274084,
+   "max": 0.5678030848503113,
+   "min": 8.223598706535995e-05
+  },
+  "model.layers.5.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.036878734827041626,
+   "max": 5.0249834060668945,
+   "min": 0.023996839299798012
+  },
+  "model.layers.5.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.036878734827041626,
+   "max": 5.0249834060668945,
+   "min": 0.023996839299798012
+  },
+  "model.layers.5.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0004993930924683809,
+   "max": 0.0556945763528347,
+   "min": 0.00010973375901812688
+  },
+  "model.layers.6.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.061170708388090134,
+   "max": 69.47542572021484,
+   "min": 0.02900487557053566
+  },
+  "model.layers.6.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.061170708388090134,
+   "max": 69.47542572021484,
+   "min": 0.02900487557053566
+  },
+  "model.layers.6.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0008105825399979949,
+   "max": 0.13180971145629883,
+   "min": 0.0001249613706022501
+  },
+  "model.layers.7.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.05482063442468643,
+   "max": 15.157869338989258,
+   "min": 0.0
+  },
+  "model.layers.7.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.05482063442468643,
+   "max": 15.157869338989258,
+   "min": 0.0
+  },
+  "model.layers.7.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0009387056343257427,
+   "max": 0.10356146097183228,
+   "min": 0.00021801791444886476
+  },
+  "model.layers.8.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.058684349060058594,
+   "max": 12.44034194946289,
+   "min": 0.031455591320991516
+  },
+  "model.layers.8.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.058684349060058594,
+   "max": 12.44034194946289,
+   "min": 0.031455591320991516
+  },
+  "model.layers.8.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0010485826060175896,
+   "max": 0.08875768631696701,
+   "min": 0.0002475889341440052
+  },
+  "model.layers.9.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.06320394575595856,
+   "max": 11.655131340026855,
+   "min": 0.023266684263944626
+  },
+  "model.layers.9.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.06320394575595856,
+   "max": 11.655131340026855,
+   "min": 0.023266684263944626
+  },
+  "model.layers.9.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0011307746171951294,
+   "max": 0.0693269819021225,
+   "min": 0.00024998560547828674
+  },
+  "model.layers.10.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.0677681490778923,
+   "max": 20.30970001220703,
+   "min": 0.03143645450472832
+  },
+  "model.layers.10.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.0677681490778923,
+   "max": 20.30970001220703,
+   "min": 0.03143645450472832
+  },
+  "model.layers.10.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0012051687808707356,
+   "max": 0.05642751604318619,
+   "min": 0.0002775695757009089
+  },
+  "model.layers.11.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.07373039424419403,
+   "max": 25.345226287841797,
+   "min": 0.03060510940849781
+  },
+  "model.layers.11.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.07373039424419403,
+   "max": 25.345226287841797,
+   "min": 0.03060510940849781
+  },
+  "model.layers.11.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.001325542340055108,
+   "max": 0.10288267582654953,
+   "min": 0.00028825143817812204
+  },
+  "model.layers.12.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.07573281228542328,
+   "max": 20.232656478881836,
+   "min": 0.023770110681653023
+  },
+  "model.layers.12.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.07573281228542328,
+   "max": 20.232656478881836,
+   "min": 0.023770110681653023
+  },
+  "model.layers.12.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0014802636578679085,
+   "max": 0.057216234505176544,
+   "min": 0.0003412301593925804
+  },
+  "model.layers.13.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.08054880052804947,
+   "max": 17.750396728515625,
+   "min": 0.022157980129122734
+  },
+  "model.layers.13.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.08054880052804947,
+   "max": 17.750396728515625,
+   "min": 0.022157980129122734
+  },
+  "model.layers.13.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0016391354147344828,
+   "max": 0.05402754619717598,
+   "min": 0.0004098725039511919
+  },
+  "model.layers.14.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.08403490483760834,
+   "max": 14.67493724822998,
+   "min": 0.024996472522616386
+  },
+  "model.layers.14.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.08403490483760834,
+   "max": 14.67493724822998,
+   "min": 0.024996472522616386
+  },
+  "model.layers.14.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.001797967590391636,
+   "max": 0.07303231954574585,
+   "min": 0.0004365956410765648
+  },
+  "model.layers.15.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.09485328197479248,
+   "max": 24.601526260375977,
+   "min": 0.033792633563280106
+  },
+  "model.layers.15.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.09485328197479248,
+   "max": 24.601526260375977,
+   "min": 0.033792633563280106
+  },
+  "model.layers.15.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0020396762993186712,
+   "max": 0.17765522003173828,
+   "min": 0.000537383311893791
+  },
+  "model.layers.16.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.10566233098506927,
+   "max": 32.73585510253906,
+   "min": 0.045190367847681046
+  },
+  "model.layers.16.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.10566233098506927,
+   "max": 32.73585510253906,
+   "min": 0.045190367847681046
+  },
+  "model.layers.16.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.0025174571201205254,
+   "max": 0.24682018160820007,
+   "min": 0.0006001259898766875
+  },
+  "model.layers.17.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.12123887240886688,
+   "max": 41.56032180786133,
+   "min": 0.06349360942840576
+  },
+  "model.layers.17.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.12123887240886688,
+   "max": 41.56032180786133,
+   "min": 0.06349360942840576
+  },
+  "model.layers.17.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.003278243588283658,
+   "max": 0.17587769031524658,
+   "min": 0.0007716371328569949
+  },
+  "model.layers.18.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.15658363699913025,
+   "max": 103.25838470458984,
+   "min": 0.07499823719263077
+  },
+  "model.layers.18.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.15658363699913025,
+   "max": 103.25838470458984,
+   "min": 0.07499823719263077
+  },
+  "model.layers.18.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.00524481013417244,
+   "max": 0.1952383816242218,
+   "min": 0.000754903128836304
+  },
+  "model.layers.19.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.19101974368095398,
+   "max": 116.86337280273438,
+   "min": 0.08785898983478546
+  },
+  "model.layers.19.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.19101974368095398,
+   "max": 116.86337280273438,
+   "min": 0.08785898983478546
+  },
+  "model.layers.19.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.007108872756361961,
+   "max": 0.30270904302597046,
+   "min": 0.0013788174837827682
+  },
+  "model.layers.20.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.21624915301799774,
+   "max": 85.6912841796875,
+   "min": 0.0803103893995285
+  },
+  "model.layers.20.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.21624915301799774,
+   "max": 85.6912841796875,
+   "min": 0.0803103893995285
+  },
+  "model.layers.20.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.009190122596919537,
+   "max": 2.0324904918670654,
+   "min": 0.0020443652756512165
+  },
+  "model.layers.21.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.22821541130542755,
+   "max": 70.1602783203125,
+   "min": 0.05891861766576767
+  },
+  "model.layers.21.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.22821541130542755,
+   "max": 70.1602783203125,
+   "min": 0.05891861766576767
+  },
+  "model.layers.21.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.009534018114209175,
+   "max": 4.114505767822266,
+   "min": 0.0019277597311884165
+  },
+  "model.layers.22.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.26774439215660095,
+   "max": 172.6295928955078,
+   "min": 0.09468534588813782
+  },
+  "model.layers.22.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.26774439215660095,
+   "max": 172.6295928955078,
+   "min": 0.09468534588813782
+  },
+  "model.layers.22.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.010661877691745758,
+   "max": 0.87469881772995,
+   "min": 0.0006363382562994957
+  },
+  "model.layers.23.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.2804931104183197,
+   "max": 162.617431640625,
+   "min": 0.06343565136194229
+  },
+  "model.layers.23.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.2804931104183197,
+   "max": 162.617431640625,
+   "min": 0.06343565136194229
+  },
+  "model.layers.23.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.011469369754195213,
+   "max": 1.4496181011199951,
+   "min": 0.0032153408974409103
+  },
+  "model.layers.24.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3189496397972107,
+   "max": 261.65374755859375,
+   "min": 0.11493463814258575
+  },
+  "model.layers.24.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3189496397972107,
+   "max": 261.65374755859375,
+   "min": 0.11493463814258575
+  },
+  "model.layers.24.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.014121124520897865,
+   "max": 2.3682336807250977,
+   "min": 0.0036138773430138826
+  },
+  "model.layers.25.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3209701478481293,
+   "max": 301.33331298828125,
+   "min": 0.10656927525997162
+  },
+  "model.layers.25.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3209701478481293,
+   "max": 301.33331298828125,
+   "min": 0.10656927525997162
+  },
+  "model.layers.25.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.013376079499721527,
+   "max": 0.33325985074043274,
+   "min": 0.003560989163815975
+  },
+  "model.layers.26.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3501163423061371,
+   "max": 485.00885009765625,
+   "min": 0.09256187081336975
+  },
+  "model.layers.26.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3501163423061371,
+   "max": 485.00885009765625,
+   "min": 0.09256187081336975
+  },
+  "model.layers.26.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.014246836304664612,
+   "max": 0.8841788172721863,
+   "min": 0.004065125714987516
+  },
+  "model.layers.27.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3645547330379486,
+   "max": 536.3558959960938,
+   "min": 0.08605316281318665
+  },
+  "model.layers.27.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.3645547330379486,
+   "max": 536.3558959960938,
+   "min": 0.08605316281318665
+  },
+  "model.layers.27.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.014108371920883656,
+   "max": 0.42822128534317017,
+   "min": 0.0034281767439097166
+  },
+  "model.layers.28.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.36130768060684204,
+   "max": 540.1683349609375,
+   "min": 0.08412159979343414
+  },
+  "model.layers.28.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.36130768060684204,
+   "max": 540.1683349609375,
+   "min": 0.08412159979343414
+  },
+  "model.layers.28.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.01440364308655262,
+   "max": 0.5201349258422852,
+   "min": 0.0032723445910960436
+  },
+  "model.layers.29.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.36384838819503784,
+   "max": 542.2631225585938,
+   "min": 0.07748157531023026
+  },
+  "model.layers.29.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.36384838819503784,
+   "max": 542.2631225585938,
+   "min": 0.07748157531023026
+  },
+  "model.layers.29.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.014291287399828434,
+   "max": 0.547303318977356,
+   "min": 0.0035174177028238773
+  },
+  "model.layers.30.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.38538455963134766,
+   "max": 647.2537841796875,
+   "min": 0.07193537056446075
+  },
+  "model.layers.30.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.38538455963134766,
+   "max": 647.2537841796875,
+   "min": 0.07193537056446075
+  },
+  "model.layers.30.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.014631233178079128,
+   "max": 1.8270281553268433,
+   "min": 0.0024395312648266554
+  },
+  "model.layers.31.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.4001658856868744,
+   "max": 648.5390625,
+   "min": 0.08829685300588608
+  },
+  "model.layers.31.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.4001658856868744,
+   "max": 648.5390625,
+   "min": 0.08829685300588608
+  },
+  "model.layers.31.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.015391314402222633,
+   "max": 0.9959992170333862,
+   "min": 0.0036682547070086002
+  },
+  "model.layers.32.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.42861780524253845,
+   "max": 703.9453735351562,
+   "min": 0.10292424261569977
+  },
+  "model.layers.32.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.42861780524253845,
+   "max": 703.9453735351562,
+   "min": 0.10292424261569977
+  },
+  "model.layers.32.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.016566094011068344,
+   "max": 0.3612624704837799,
+   "min": 0.00330929784104228
+  },
+  "model.layers.33.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.44385260343551636,
+   "max": 715.0252685546875,
+   "min": 0.18361182510852814
+  },
+  "model.layers.33.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.44385260343551636,
+   "max": 715.0252685546875,
+   "min": 0.18361182510852814
+  },
+  "model.layers.33.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.016913533210754395,
+   "max": 0.4672348201274872,
+   "min": 0.003814717521890998
+  },
+  "model.layers.34.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5160578489303589,
+   "max": 914.4803466796875,
+   "min": 0.17947401106357574
+  },
+  "model.layers.34.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5160578489303589,
+   "max": 914.4803466796875,
+   "min": 0.17947401106357574
+  },
+  "model.layers.34.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.022405747324228287,
+   "max": 1.0902481079101562,
+   "min": 0.0030150157399475574
+  },
+  "model.layers.35.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5074013471603394,
+   "max": 722.5642700195312,
+   "min": 0.21456214785575867
+  },
+  "model.layers.35.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5074013471603394,
+   "max": 722.5642700195312,
+   "min": 0.21456214785575867
+  },
+  "model.layers.35.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.026813019067049026,
+   "max": 18.71908187866211,
+   "min": 0.0036583805922418833
+  },
+  "model.layers.36.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.48538726568222046,
+   "max": 523.7267456054688,
+   "min": 0.2219555526971817
+  },
+  "model.layers.36.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.48538726568222046,
+   "max": 523.7267456054688,
+   "min": 0.2219555526971817
+  },
+  "model.layers.36.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.025135699659585953,
+   "max": 2.289281129837036,
+   "min": 0.005618703551590443
+  },
+  "model.layers.37.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.4496934413909912,
+   "max": 378.3531799316406,
+   "min": 0.22237911820411682
+  },
+  "model.layers.37.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.4496934413909912,
+   "max": 378.3531799316406,
+   "min": 0.22237911820411682
+  },
+  "model.layers.37.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.021306807175278664,
+   "max": 0.996280312538147,
+   "min": 0.004817222245037556
+  },
+  "model.layers.38.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5661753416061401,
+   "max": 738.2296142578125,
+   "min": 0.2509869635105133
+  },
+  "model.layers.38.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5661753416061401,
+   "max": 738.2296142578125,
+   "min": 0.2509869635105133
+  },
+  "model.layers.38.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.022593501955270767,
+   "max": 4.156469345092773,
+   "min": 0.003949595615267754
+  },
+  "model.layers.39.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.49306854605674744,
+   "max": 524.9895629882812,
+   "min": 0.20318594574928284
+  },
+  "model.layers.39.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.49306854605674744,
+   "max": 524.9895629882812,
+   "min": 0.20318594574928284
+  },
+  "model.layers.39.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.01988961361348629,
+   "max": 2.8961026668548584,
+   "min": 0.0060416050255298615
+  },
+  "model.layers.40.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5561372637748718,
+   "max": 735.5706787109375,
+   "min": 0.2569807171821594
+  },
+  "model.layers.40.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5561372637748718,
+   "max": 735.5706787109375,
+   "min": 0.2569807171821594
+  },
+  "model.layers.40.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.022251540794968605,
+   "max": 2.56123948097229,
+   "min": 0.004665653221309185
+  },
+  "model.layers.41.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.49033278226852417,
+   "max": 614.07275390625,
+   "min": 0.2291218787431717
+  },
+  "model.layers.41.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.49033278226852417,
+   "max": 614.07275390625,
+   "min": 0.2291218787431717
+  },
+  "model.layers.41.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.01944749243557453,
+   "max": 2.185424566268921,
+   "min": 0.004286236595362425
+  },
+  "model.layers.42.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5017109513282776,
+   "max": 730.3043823242188,
+   "min": 0.19968882203102112
+  },
+  "model.layers.42.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5017109513282776,
+   "max": 730.3043823242188,
+   "min": 0.19968882203102112
+  },
+  "model.layers.42.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.021131079643964767,
+   "max": 5.569571018218994,
+   "min": 0.0032085946295410395
+  },
+  "model.layers.43.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.4939063489437103,
+   "max": 655.30126953125,
+   "min": 0.2007988542318344
+  },
+  "model.layers.43.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.4939063489437103,
+   "max": 655.30126953125,
+   "min": 0.2007988542318344
+  },
+  "model.layers.43.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.021814793348312378,
+   "max": 2.110544443130493,
+   "min": 0.006174827925860882
+  },
+  "model.layers.44.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5050792694091797,
+   "max": 627.3576049804688,
+   "min": 0.2135530263185501
+  },
+  "model.layers.44.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5050792694091797,
+   "max": 627.3576049804688,
+   "min": 0.2135530263185501
+  },
+  "model.layers.44.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.024768289178609848,
+   "max": 1.0674777030944824,
+   "min": 0.007231532130390406
+  },
+  "model.layers.45.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5113500952720642,
+   "max": 621.4773559570312,
+   "min": 0.18527193367481232
+  },
+  "model.layers.45.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5113500952720642,
+   "max": 621.4773559570312,
+   "min": 0.18527193367481232
+  },
+  "model.layers.45.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.025203155353665352,
+   "max": 0.8242844343185425,
+   "min": 0.006018849555402994
+  },
+  "model.layers.46.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5408233404159546,
+   "max": 707.982421875,
+   "min": 0.19610081613063812
+  },
+  "model.layers.46.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5408233404159546,
+   "max": 707.982421875,
+   "min": 0.19610081613063812
+  },
+  "model.layers.46.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.02866620570421219,
+   "max": 16.127119064331055,
+   "min": 0.003183612832799554
+  },
+  "model.layers.47.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5849009156227112,
+   "max": 710.8426513671875,
+   "min": 0.24763146042823792
+  },
+  "model.layers.47.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.5849009156227112,
+   "max": 710.8426513671875,
+   "min": 0.24763146042823792
+  },
+  "model.layers.47.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.034682199358940125,
+   "max": 5.2680583000183105,
+   "min": 0.00774983549490571
+  },
+  "model.layers.48.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.6268812417984009,
+   "max": 671.931396484375,
+   "min": 0.25739553570747375
+  },
+  "model.layers.48.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.6268812417984009,
+   "max": 671.931396484375,
+   "min": 0.25739553570747375
+  },
+  "model.layers.48.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.04260042682290077,
+   "max": 5.2771477699279785,
+   "min": 0.008352238684892654
+  },
+  "model.layers.49.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.6749047040939331,
+   "max": 661.4352416992188,
+   "min": 0.2662568688392639
+  },
+  "model.layers.49.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.6749047040939331,
+   "max": 661.4352416992188,
+   "min": 0.2662568688392639
+  },
+  "model.layers.49.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.055956270545721054,
+   "max": 3.4609014987945557,
+   "min": 0.008943004533648491
+  },
+  "model.layers.50.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.8335670232772827,
+   "max": 940.1051025390625,
+   "min": 0.2843209207057953
+  },
+  "model.layers.50.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.8335670232772827,
+   "max": 940.1051025390625,
+   "min": 0.2843209207057953
+  },
+  "model.layers.50.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.10022387653589249,
+   "max": 11.026083946228027,
+   "min": 0.008460662327706814
+  },
+  "model.layers.51.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.8392127156257629,
+   "max": 483.3571472167969,
+   "min": 0.3369404971599579
+  },
+  "model.layers.51.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.8392127156257629,
+   "max": 483.3571472167969,
+   "min": 0.3369404971599579
+  },
+  "model.layers.51.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.12194277346134186,
+   "max": 29.37236213684082,
+   "min": 0.007777245249599218
+  },
+  "model.layers.52.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.9243842363357544,
+   "max": 299.0681457519531,
+   "min": 0.36482974886894226
+  },
+  "model.layers.52.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.9243842363357544,
+   "max": 299.0681457519531,
+   "min": 0.36482974886894226
+  },
+  "model.layers.52.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.13089619576931,
+   "max": 36.040931701660156,
+   "min": 0.006291588768362999
+  },
+  "model.layers.53.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.9651728868484497,
+   "max": 226.4560089111328,
+   "min": 0.41395238041877747
+  },
+  "model.layers.53.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 0.9651728868484497,
+   "max": 226.4560089111328,
+   "min": 0.41395238041877747
+  },
+  "model.layers.53.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.12934806942939758,
+   "max": 8.046021461486816,
+   "min": 0.005967402830719948
+  },
+  "model.layers.54.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.1349000930786133,
+   "max": 369.9494323730469,
+   "min": 0.47946563363075256
+  },
+  "model.layers.54.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.1349000930786133,
+   "max": 369.9494323730469,
+   "min": 0.47946563363075256
+  },
+  "model.layers.54.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.26022839546203613,
+   "max": 678.595458984375,
+   "min": 0.005970609374344349
+  },
+  "model.layers.55.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.0677393674850464,
+   "max": 170.53610229492188,
+   "min": 0.48399507999420166
+  },
+  "model.layers.55.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.0677393674850464,
+   "max": 170.53610229492188,
+   "min": 0.48399507999420166
+  },
+  "model.layers.55.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.16225552558898926,
+   "max": 85.5546646118164,
+   "min": 0.006825865246355534
+  },
+  "model.layers.56.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.140559196472168,
+   "max": 185.69747924804688,
+   "min": 0.5325645804405212
+  },
+  "model.layers.56.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.140559196472168,
+   "max": 185.69747924804688,
+   "min": 0.5325645804405212
+  },
+  "model.layers.56.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.15193729102611542,
+   "max": 11.328630447387695,
+   "min": 0.0070432936772704124
+  },
+  "model.layers.57.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.2501808404922485,
+   "max": 295.1598205566406,
+   "min": 0.5749229788780212
+  },
+  "model.layers.57.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.2501808404922485,
+   "max": 295.1598205566406,
+   "min": 0.5749229788780212
+  },
+  "model.layers.57.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.15273825824260712,
+   "max": 26.23895835876465,
+   "min": 0.009967029094696045
+  },
+  "model.layers.58.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.3723636865615845,
+   "max": 439.23944091796875,
+   "min": 0.6583690643310547
+  },
+  "model.layers.58.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.3723636865615845,
+   "max": 439.23944091796875,
+   "min": 0.6583690643310547
+  },
+  "model.layers.58.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.3073939383029938,
+   "max": 1993.2752685546875,
+   "min": 0.00800978485494852
+  },
+  "model.layers.59.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.3795735836029053,
+   "max": 508.6184997558594,
+   "min": 0.6276155114173889
+  },
+  "model.layers.59.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.3795735836029053,
+   "max": 508.6184997558594,
+   "min": 0.6276155114173889
+  },
+  "model.layers.59.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.29008054733276367,
+   "max": 774.5626220703125,
+   "min": 0.008130868896842003
+  },
+  "model.layers.60.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.4425828456878662,
+   "max": 630.9644775390625,
+   "min": 0.5746452808380127
+  },
+  "model.layers.60.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.4425828456878662,
+   "max": 630.9644775390625,
+   "min": 0.5746452808380127
+  },
+  "model.layers.60.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.29377779364585876,
+   "max": 45.52535629272461,
+   "min": 0.006580011919140816
+  },
+  "model.layers.61.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.5513371229171753,
+   "max": 781.6805419921875,
+   "min": 0.6220486164093018
+  },
+  "model.layers.61.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.5513371229171753,
+   "max": 781.6805419921875,
+   "min": 0.6220486164093018
+  },
+  "model.layers.61.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.38879695534706116,
+   "max": 351.84173583984375,
+   "min": 0.0021164114587008953
+  },
+  "model.layers.62.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.4983179569244385,
+   "max": 922.508544921875,
+   "min": 0.645307719707489
+  },
+  "model.layers.62.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.4983179569244385,
+   "max": 922.508544921875,
+   "min": 0.645307719707489
+  },
+  "model.layers.62.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 0.7499434351921082,
+   "max": 397.7174377441406,
+   "min": 0.001490619732066989
+  },
+  "model.layers.63.mlp.gate_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.3110809326171875,
+   "max": 914.1700439453125,
+   "min": 0.5341230034828186
+  },
+  "model.layers.63.mlp.up_proj": {
+   "channels": 5120,
+   "rows_observed": 23553,
+   "mean": 1.3110809326171875,
+   "max": 914.1700439453125,
+   "min": 0.5341230034828186
+  },
+  "model.layers.63.mlp.down_proj": {
+   "channels": 17408,
+   "rows_observed": 23553,
+   "mean": 3.718271255493164,
+   "max": 2092.992919921875,
+   "min": 0.0022103595547378063
+  }
+ }
+}

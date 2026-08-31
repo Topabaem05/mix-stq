@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import llama_calibration as calibration
@@ -45,14 +47,14 @@ def test_deterministic_corpus_revisions_order_and_hashes(tmp_path: Path) -> None
     second_out = tmp_path / "second.txt"
     second_manifest = tmp_path / "second.json"
 
-    calibration.build_corpus(
+    calibration._build_corpus_with_loader(
         first_out,
         first_manifest,
         per_domain=2,
         min_chars=200,
         load_dataset_fn=_loader(rows, calls),
     )
-    calibration.build_corpus(
+    calibration._build_corpus_with_loader(
         second_out,
         second_manifest,
         per_domain=2,
@@ -62,7 +64,11 @@ def test_deterministic_corpus_revisions_order_and_hashes(tmp_path: Path) -> None
 
     assert first_out.read_bytes() == second_out.read_bytes()
     assert first_manifest.read_bytes() == second_manifest.read_bytes()
+    assert calibration.commit_marker_path(first_manifest).read_bytes() == (
+        calibration.commit_marker_path(second_manifest).read_bytes()
+    )
     manifest = json.loads(first_manifest.read_text(encoding="utf-8"))
+    assert calibration.require_committed_corpus(first_out, first_manifest) == manifest
     assert manifest["format"] == calibration.FORMAT
     assert manifest["version"] == calibration.FORMAT_VERSION
     assert manifest["selection"]["domain_order"] == ["wiki", "code", "chat"]
@@ -125,16 +131,48 @@ def test_deterministic_corpus_revisions_order_and_hashes(tmp_path: Path) -> None
     assert separator == "\n\n\x1e\n\n"
     assert len(separator.encode("utf-8")) <= 16
     normalized_records = first_out.read_text(encoding="utf-8").split(separator)
-    expected_hashes = [
+    expected_normalized_hashes = [
         hashlib.sha256(text.encode("utf-8")).hexdigest() for text in normalized_records
     ]
-    assert manifest["ordered_record_sha256"] == expected_hashes
-    assert [record["sha256"] for record in manifest["records"]] == expected_hashes
-    assert manifest["aggregate_ordered_sha256"] == hashlib.sha256(
-        "".join(expected_hashes).encode("ascii")
+    selected_raw_texts = [
+        rows[spec.domain][2 + domain_index][spec.field]
+        for spec in calibration.DATASETS
+        for domain_index in range(2)
+    ]
+    assert all(isinstance(text, str) for text in selected_raw_texts)
+    expected_source_hashes = [
+        hashlib.sha256(text.encode("utf-8")).hexdigest() for text in selected_raw_texts
+    ]
+    assert manifest["ordered_normalized_sha256"] == expected_normalized_hashes
+    assert [record["source_sha256"] for record in manifest["records"]] == (
+        expected_source_hashes
+    )
+    assert [record["normalized_sha256"] for record in manifest["records"]] == (
+        expected_normalized_hashes
+    )
+    assert expected_source_hashes != expected_normalized_hashes
+    assert manifest["aggregate_ordered_normalized_sha256"] == hashlib.sha256(
+        "".join(expected_normalized_hashes).encode("ascii")
     ).hexdigest()
+    assert "provenance only" in manifest["hash_semantics"]["source_sha256"]
+    assert "feeds the ordered aggregate identity" in (
+        manifest["hash_semantics"]["normalized_sha256"]
+    )
+    assert "source hashes do not feed corpus identity" in (
+        manifest["hash_semantics"]["corpus_sha256"]
+    )
     assert manifest["corpus"]["byte_size"] == len(corpus_bytes)
     assert manifest["corpus"]["sha256"] == hashlib.sha256(corpus_bytes).hexdigest()
+    marker = json.loads(
+        calibration.commit_marker_path(first_manifest).read_text(encoding="utf-8")
+    )
+    assert marker == {
+        "format": calibration.COMMIT_FORMAT,
+        "version": calibration.COMMIT_VERSION,
+        "protocol": calibration.PUBLICATION_PROTOCOL,
+        "corpus_sha256": hashlib.sha256(corpus_bytes).hexdigest(),
+        "manifest_sha256": hashlib.sha256(first_manifest.read_bytes()).hexdigest(),
+    }
     assert separator not in normalized_records
     assert manifest["contamination"]["evaluation_datasets_touched"] is False
     assert manifest["contamination"]["excluded_evaluation_datasets"] == ["MMLU", "ARC"]
@@ -155,6 +193,20 @@ def test_separator_collision_uses_short_variant_and_corpus_round_trips() -> None
     assert corpus.split(separator) == expected_records
 
 
+def test_separator_exhaustion_fails_closed_within_utf8_limit() -> None:
+    candidates = [
+        "\n\n" + ("\x1e" * count) + "\n\n"
+        for count in range(1, calibration.MAX_SEPARATOR_UTF8_BYTES + 1)
+        if len(("\n\n" + ("\x1e" * count) + "\n\n").encode("utf-8"))
+        <= calibration.MAX_SEPARATOR_UTF8_BYTES
+    ]
+    assert candidates
+    assert max(len(candidate.encode("utf-8")) for candidate in candidates) == 16
+
+    with pytest.raises(RuntimeError, match=r"no collision-free.*16-byte"):
+        calibration._choose_separator(["".join(candidates)])
+
+
 def test_normalization_is_canonical_and_preserves_code_layout() -> None:
     raw = "  Cafe\u0301  \r\n    return 1\t \r\n\r\n"
     assert calibration.normalize_text(raw) == "Café\n    return 1"
@@ -172,7 +224,7 @@ def test_minimum_character_boundary_is_inclusive_and_source_ordered(tmp_path: Pa
     out = tmp_path / "boundary.txt"
     manifest_path = tmp_path / "boundary.json"
 
-    manifest = calibration.build_corpus(
+    manifest = calibration._build_corpus_with_loader(
         out,
         manifest_path,
         per_domain=1,
@@ -196,7 +248,7 @@ def test_insufficient_stream_leaves_no_artifacts_or_temps(tmp_path: Path) -> Non
     manifest = tmp_path / "manifest.json"
 
     with pytest.raises(RuntimeError, match=r"code.*1.*2"):
-        calibration.build_corpus(
+        calibration._build_corpus_with_loader(
             out,
             manifest,
             per_domain=2,
@@ -209,27 +261,34 @@ def test_insufficient_stream_leaves_no_artifacts_or_temps(tmp_path: Path) -> Non
     assert list(tmp_path.iterdir()) == []
 
 
-@pytest.mark.parametrize("existing", ["out", "manifest"])
+@pytest.mark.parametrize("existing", ["out", "manifest", "marker"])
 def test_existing_artifact_is_preserved_before_loading(tmp_path: Path, existing: str) -> None:
     out = tmp_path / "corpus.txt"
     manifest = tmp_path / "manifest.json"
-    protected = out if existing == "out" else manifest
+    paths = {
+        "out": out,
+        "manifest": manifest,
+        "marker": calibration.commit_marker_path(manifest),
+    }
+    protected = paths[existing]
     protected.write_bytes(b"do-not-overwrite")
     calls = []
 
     with pytest.raises(FileExistsError, match=str(protected)):
-        calibration.build_corpus(
+        calibration._build_corpus_with_loader(
             out,
             manifest,
+            per_domain=32,
+            min_chars=200,
             load_dataset_fn=_loader(_rows_by_domain(32), calls),
         )
 
     assert protected.read_bytes() == b"do-not-overwrite"
-    assert not (manifest if existing == "out" else out).exists()
+    assert all(not path.exists() for name, path in paths.items() if name != existing)
     assert calls == []
 
 
-def test_second_atomic_publish_failure_rolls_back_both_outputs(
+def test_commit_marker_publish_failure_rolls_back_pair_and_temps(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = tmp_path / "corpus.txt"
@@ -240,13 +299,13 @@ def test_second_atomic_publish_failure_rolls_back_both_outputs(
     def fail_second_link(source, destination):
         nonlocal link_calls
         link_calls += 1
-        if link_calls == 2:
-            raise OSError("simulated manifest publish failure")
+        if link_calls == 3:
+            raise OSError("simulated commit marker publish failure")
         return real_link(source, destination)
 
     monkeypatch.setattr(calibration.os, "link", fail_second_link)
-    with pytest.raises(OSError, match="simulated manifest publish failure"):
-        calibration.build_corpus(
+    with pytest.raises(OSError, match="simulated commit marker publish failure"):
+        calibration._build_corpus_with_loader(
             out,
             manifest,
             per_domain=1,
@@ -256,7 +315,62 @@ def test_second_atomic_publish_failure_rolls_back_both_outputs(
 
     assert not out.exists()
     assert not manifest.exists()
+    assert not calibration.commit_marker_path(manifest).exists()
     assert list(tmp_path.iterdir()) == []
+
+
+def test_abrupt_interruption_before_commit_is_rejected_without_loading(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "corpus.txt"
+    manifest = tmp_path / "manifest.json"
+    source_root = Path(calibration.__file__).resolve().parents[1]
+    script = r"""
+import os
+import sys
+from pathlib import Path
+import mixstq.llama_calibration as calibration
+
+out = Path(sys.argv[1])
+manifest = Path(sys.argv[2])
+real_link = os.link
+link_calls = 0
+
+def interrupt_before_commit(source, destination):
+    global link_calls
+    link_calls += 1
+    if link_calls == 3:
+        os._exit(73)
+    return real_link(source, destination)
+
+calibration.os.link = interrupt_before_commit
+calibration._publish_pair(out, b"corpus", manifest, b"{}\n")
+"""
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(source_root)
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(out), str(manifest)],
+        env=environment,
+        check=False,
+    )
+
+    assert completed.returncode == 73
+    assert out.is_file()
+    assert manifest.is_file()
+    assert not calibration.commit_marker_path(manifest).exists()
+    with pytest.raises(RuntimeError, match="not committed"):
+        calibration.require_committed_corpus(out, manifest)
+
+    calls = []
+    with pytest.raises(FileExistsError, match="uncommitted"):
+        calibration._build_corpus_with_loader(
+            out,
+            manifest,
+            per_domain=1,
+            min_chars=200,
+            load_dataset_fn=_loader(_rows_by_domain(1), calls),
+        )
+    assert calls == []
 
 
 def test_cli_requires_paths_and_exposes_selection_defaults() -> None:
@@ -267,12 +381,116 @@ def test_cli_requires_paths_and_exposes_selection_defaults() -> None:
     assert args.min_chars == 200
 
 
-def test_default_build_records_exactly_96_ordered_hashes(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("option", "value", "message"),
+    [
+        ("--per-domain", "1", "--per-domain must be exactly 32"),
+        ("--min-chars", "199", "--min-chars must be exactly 200"),
+    ],
+)
+def test_cli_rejects_noncanonical_selection(
+    option: str, value: str, message: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit, match="2"):
+        calibration.parse_args(
+            ["--out", "corpus.txt", "--manifest", "manifest.json", option, value]
+        )
+
+    assert message in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"per_domain": 1}, "per_domain must be exactly 32"),
+        ({"min_chars": 199}, "min_chars must be exactly 200"),
+    ],
+)
+def test_public_builder_rejects_noncanonical_selection_before_loading(
+    tmp_path: Path, kwargs: dict[str, int], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        calibration.build_corpus(
+            tmp_path / "corpus.txt",
+            tmp_path / "manifest.json",
+            **kwargs,
+        )
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_public_builder_rejects_existing_artifact_before_default_loader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out = tmp_path / "corpus.txt"
+    out.write_bytes(b"preserve")
+    loader_calls = 0
+
+    def unexpected_default_loader():
+        nonlocal loader_calls
+        loader_calls += 1
+        raise AssertionError("default loader must not run")
+
+    monkeypatch.setattr(calibration, "_default_loader", unexpected_default_loader)
+    with pytest.raises(FileExistsError, match="uncommitted"):
+        calibration.build_corpus(out, tmp_path / "manifest.json")
+
+    assert loader_calls == 0
+    assert out.read_bytes() == b"preserve"
+
+
+def test_public_default_build_records_exactly_96_ordered_hashes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        calibration,
+        "_default_loader",
+        lambda: _loader(_rows_by_domain(32), []),
+    )
     manifest = calibration.build_corpus(
         tmp_path / "corpus.txt",
         tmp_path / "manifest.json",
-        load_dataset_fn=_loader(_rows_by_domain(32), []),
     )
 
     assert len(manifest["records"]) == 96
-    assert len(manifest["ordered_record_sha256"]) == 96
+    assert len(manifest["ordered_normalized_sha256"]) == 96
+
+
+def test_cli_exposes_and_requires_committed_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        calibration,
+        "_default_loader",
+        lambda: _loader(_rows_by_domain(32), []),
+    )
+    out = tmp_path / "corpus.txt"
+    manifest_path = tmp_path / "manifest.json"
+
+    assert (
+        calibration.main(["--out", str(out), "--manifest", str(manifest_path)]) == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["committed"] is True
+    assert payload["commit_marker"] == str(calibration.commit_marker_path(manifest_path))
+    committed = calibration.require_committed_corpus(out, manifest_path)
+    assert payload["corpus_sha256"] == committed["corpus"]["sha256"]
+
+
+def test_consumer_rejects_tampered_committed_pair(tmp_path: Path) -> None:
+    out = tmp_path / "corpus.txt"
+    manifest_path = tmp_path / "manifest.json"
+    calibration._build_corpus_with_loader(
+        out,
+        manifest_path,
+        per_domain=1,
+        min_chars=200,
+        load_dataset_fn=_loader(_rows_by_domain(1), []),
+    )
+    out.write_bytes(out.read_bytes() + b"tampered")
+
+    with pytest.raises(RuntimeError, match="commit marker does not match"):
+        calibration.require_committed_corpus(out, manifest_path)

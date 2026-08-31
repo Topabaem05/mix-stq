@@ -12,11 +12,13 @@ import torch
 
 stub_datasets = types.ModuleType("datasets")
 stub_datasets.load_dataset = lambda *a, **k: iter([])
+stub_datasets.__version__ = "test-datasets"
 sys.modules.setdefault("datasets", stub_datasets)
 
 stub_tf = types.ModuleType("transformers")
 stub_tf.AutoModelForCausalLM = object
 stub_tf.AutoTokenizer = object
+stub_tf.__version__ = "test-transformers"
 sys.modules.setdefault("transformers", stub_tf)
 
 stub_iq2 = types.ModuleType("torch_iq2")
@@ -31,15 +33,22 @@ from eval_tasks import (  # noqa: E402
     ARC_DATASET_REVISION,
     LETTERS,
     MMLU_DATASET_REVISION,
+    STRICT_PROTOCOL_FINGERPRINT,
     cache_provenance,
     item_fingerprint,
     load_arc,
     load_cached_correct,
     load_mmlu,
     load_mmlu_stratified,
+    mmlu_item,
+    parameter_dtype_distribution,
     parse_args,
     render,
+    runtime_identity,
     score_item,
+    validate_bfloat16_distribution,
+    validate_item_counts,
+    validate_protocol,
 )
 
 failures = []
@@ -89,6 +98,15 @@ for expected_index, letter in enumerate(LETTERS):
     picked = score_item(model, tokenizer, item, "cpu")
     if picked != expected_index:
         failures.append("scoring picked %d when option %s was favored" % (picked, letter))
+
+for invalid_answer in (True, False, -1, 4, "1", None):
+    invalid_row = dict(item, answer=invalid_answer)
+    if mmlu_item(invalid_row) is not None:
+        failures.append("invalid MMLU answer was accepted: %r" % invalid_answer)
+for valid_answer in range(4):
+    valid_row = dict(item, answer=valid_answer)
+    if mmlu_item(valid_row) is None:
+        failures.append("valid MMLU answer was rejected: %d" % valid_answer)
 
 mmlu_rows = []
 for subject_index in range(57):
@@ -147,6 +165,16 @@ try:
 finally:
     eval_tasks.load_dataset = original_load_dataset
 
+zero_load_calls = []
+eval_tasks.load_dataset = lambda *args, **kwargs: zero_load_calls.append((args, kwargs))
+try:
+    if load_mmlu(0) != [] or load_arc(0) != []:
+        failures.append("zero item limits did not return empty lists")
+    if zero_load_calls:
+        failures.append("zero item limits unnecessarily opened datasets")
+finally:
+    eval_tasks.load_dataset = original_load_dataset
+
 for name, _config, kwargs in dataset_calls:
     expected_revision = MMLU_DATASET_REVISION if name == "cais/mmlu" else ARC_DATASET_REVISION
     if kwargs.get("revision") != expected_revision:
@@ -161,6 +189,8 @@ required_cli = [
 defaults = parse_args(required_cli)
 if defaults.mmlu != 140 or defaults.mmlu_per_subject is not None:
     failures.append("legacy default --mmlu behavior changed")
+if defaults.protocol != "generic":
+    failures.append("generic protocol is not the default")
 if defaults.arc != 230:
     failures.append("default ARC valid-item count is not 230")
 with contextlib.redirect_stderr(io.StringIO()):
@@ -171,6 +201,87 @@ with contextlib.redirect_stderr(io.StringIO()):
             failures.append("ambiguous MMLU CLI exited with an unexpected status")
     else:
         failures.append("ambiguous --mmlu and --mmlu-per-subject CLI was accepted")
+
+strict_cli = [
+    *required_cli,
+    "--protocol", "qwen38_bf16_800",
+    "--model", "Qwen/Qwen3.8-27B",
+    "--revision", "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+    "--dtype", "bfloat16",
+    "--mmlu-per-subject", "10",
+    "--arc", "230",
+    "--arms", "dense,dense_iq3_ref",
+]
+strict_args = parse_args(strict_cli)
+try:
+    validate_protocol(strict_args)
+except ValueError as exc:
+    failures.append("valid strict protocol tuple was rejected: %s" % exc)
+for field, value in {
+    "model": "other/model",
+    "revision": "other-revision",
+    "dtype": "float16",
+    "mmlu_per_subject": 9,
+    "arc": 229,
+    "arms": "dense",
+}.items():
+    invalid_args = types.SimpleNamespace(**vars(strict_args))
+    setattr(invalid_args, field, value)
+    try:
+        validate_protocol(invalid_args)
+    except ValueError:
+        pass
+    else:
+        failures.append("strict protocol accepted invalid %s" % field)
+
+runtime = runtime_identity("cpu", "bfloat16")
+required_runtime_fields = {
+    "platform", "python", "gpu", "torch", "cuda", "transformers", "datasets",
+    "device", "requested_dtype",
+}
+if set(runtime) != required_runtime_fields:
+    failures.append("runtime identity fields are incomplete")
+
+
+class DtypeStubModel:
+    def parameters(self):
+        return iter([
+            torch.nn.Parameter(torch.zeros(3, dtype=torch.bfloat16)),
+            torch.nn.Parameter(torch.zeros(2, dtype=torch.float32)),
+        ])
+
+
+distribution = parameter_dtype_distribution(DtypeStubModel())
+if distribution != {"torch.bfloat16": 3, "torch.float32": 2}:
+    failures.append("parameter dtype distribution did not count parameter elements")
+validate_bfloat16_distribution({"torch.bfloat16": 3}, "dense")
+for invalid_distribution in ({}, {"torch.float32": 3}, {"torch.bfloat16": 3, "torch.float32": 1}):
+    try:
+        validate_bfloat16_distribution(invalid_distribution, "dense")
+    except RuntimeError:
+        pass
+    else:
+        failures.append("strict BF16 validation accepted %r" % invalid_distribution)
+
+arc_count_item = dict(item, task="arc_challenge", subject="arc")
+validate_item_counts([item], [arc_count_item], 1, 1)
+try:
+    validate_item_counts([], [], 0, 0)
+except RuntimeError:
+    pass
+else:
+    failures.append("zero-total evaluation passed item count validation")
+for mmlu_items, arc_items, expected_message in (
+    ([], [arc_count_item], "expected 1 MMLU items"),
+    ([item], [], "expected 1 ARC items"),
+):
+    try:
+        validate_item_counts(mmlu_items, arc_items, 1, 1)
+    except RuntimeError as exc:
+        if expected_message not in str(exc):
+            failures.append("item count validation raised an unclear error: %s" % exc)
+    else:
+        failures.append("partial item selection passed exact count validation")
 
 fingerprint = item_fingerprint([item])
 reordered_item = {key: item[key] for key in reversed(item)}
@@ -185,7 +296,16 @@ sampling_scheme = {
     "arc": {"mode": "valid_4_choice_prefix", "count": 0},
 }
 provenance = cache_provenance(
-    "org/model", "revision-a", "float16", 1, 0, 6, "dense", sampling_scheme, fingerprint
+    "org/model",
+    "revision-a",
+    "float16",
+    1,
+    0,
+    6,
+    "dense",
+    sampling_scheme,
+    fingerprint,
+    runtime_identity("cpu", "float16"),
 )
 if provenance.get("dataset_revisions") != {
     "cais/mmlu": MMLU_DATASET_REVISION,
@@ -196,10 +316,21 @@ if provenance.get("sampling_scheme") != sampling_scheme:
     failures.append("cache provenance is missing the sampling scheme")
 if provenance.get("ordered_item_fingerprint") != fingerprint:
     failures.append("cache provenance is missing the ordered item fingerprint")
+execution_evidence = {
+    "requested_dtype": "float16",
+    "parameter_elements_by_dtype_before_plan": {"torch.float16": 2},
+    "parameter_elements_by_dtype_after_plan": {"torch.float16": 2},
+    "plan_stats": None,
+}
 with tempfile.TemporaryDirectory() as tmp:
     cache = Path(tmp) / "correct_dense.json"
     cache.write_text(
-        json.dumps({"provenance": provenance, "correct": [1]}), encoding="utf-8"
+        json.dumps({
+            "provenance": provenance,
+            "execution": execution_evidence,
+            "correct": [1],
+        }),
+        encoding="utf-8",
     )
     if load_cached_correct(cache, provenance, 1) != [1]:
         failures.append("matching cache provenance was not reused")
@@ -219,7 +350,11 @@ with tempfile.TemporaryDirectory() as tmp:
     for field, value in mismatches.items():
         contaminated = dict(provenance, **{field: value})
         cache.write_text(
-            json.dumps({"provenance": contaminated, "correct": [1]}),
+            json.dumps({
+                "provenance": contaminated,
+                "execution": execution_evidence,
+                "correct": [1],
+            }),
             encoding="utf-8",
         )
         if load_cached_correct(cache, provenance, 1) is not None:
@@ -228,6 +363,11 @@ with tempfile.TemporaryDirectory() as tmp:
     cache.write_text(json.dumps({"arm": "dense", "correct": [1]}), encoding="utf-8")
     if load_cached_correct(cache, provenance, 1) is not None:
         failures.append("legacy cache without provenance was reused")
+    cache.write_text(
+        json.dumps({"provenance": provenance, "correct": [1]}), encoding="utf-8"
+    )
+    if load_cached_correct(cache, provenance, 1) is not None:
+        failures.append("cache without arm execution evidence was reused")
 
 
 class StubAutoTokenizer:
@@ -237,8 +377,14 @@ class StubAutoTokenizer:
 
 
 class CacheStubModel:
+    def __init__(self):
+        self.weight = torch.nn.Parameter(torch.zeros(2, dtype=torch.float16))
+
     def eval(self):
         return self
+
+    def parameters(self):
+        return iter([self.weight])
 
 
 model_loads = []
@@ -249,6 +395,103 @@ class StubAutoModel:
     def from_pretrained(*args, **kwargs):
         model_loads.append((args, kwargs))
         return CacheStubModel()
+
+
+class CountingTokenizer:
+    calls = 0
+
+    @classmethod
+    def from_pretrained(cls, *_args, **_kwargs):
+        cls.calls += 1
+        return object()
+
+
+class CountingModel:
+    calls = 0
+
+    @classmethod
+    def from_pretrained(cls, *_args, **_kwargs):
+        cls.calls += 1
+        return CacheStubModel()
+
+
+validation_originals = {
+    "AutoTokenizer": eval_tasks.AutoTokenizer,
+    "AutoModelForCausalLM": eval_tasks.AutoModelForCausalLM,
+    "load_mmlu": eval_tasks.load_mmlu,
+    "load_mmlu_stratified": eval_tasks.load_mmlu_stratified,
+    "load_arc": eval_tasks.load_arc,
+    "item_fingerprint": eval_tasks.item_fingerprint,
+    "run_arm": eval_tasks.run_arm,
+    "torch_load": eval_tasks.torch.load,
+}
+
+with tempfile.TemporaryDirectory() as tmp:
+    CountingTokenizer.calls = 0
+    CountingModel.calls = 0
+    imatrix_calls = []
+    eval_tasks.AutoTokenizer = CountingTokenizer
+    eval_tasks.AutoModelForCausalLM = CountingModel
+    eval_tasks.load_mmlu = lambda _limit: [item]
+    eval_tasks.load_arc = lambda _limit: []
+    eval_tasks.run_arm = lambda *_args: [1]
+    eval_tasks.torch.load = lambda *_args, **_kwargs: imatrix_calls.append(1) or {}
+    original_argv = sys.argv
+    sys.argv = [
+        "eval_tasks.py",
+        "--model", "org/model",
+        "--revision", "revision-a",
+        "--imatrix", str(Path(tmp) / "imatrix.json"),
+        "--mmlu", "2",
+        "--arc", "0",
+        "--arms", "dense",
+        "--out", str(Path(tmp) / "partial-report.json"),
+    ]
+    try:
+        eval_tasks.main()
+    except RuntimeError as exc:
+        if "expected 2 MMLU items" not in str(exc):
+            failures.append("partial MMLU load raised an unclear error: %s" % exc)
+    else:
+        failures.append("partial MMLU load was accepted")
+    finally:
+        sys.argv = original_argv
+    if CountingTokenizer.calls or CountingModel.calls or imatrix_calls:
+        failures.append("partial item load reached paid tokenizer/imatrix/model loading")
+
+with tempfile.TemporaryDirectory() as tmp:
+    CountingTokenizer.calls = 0
+    CountingModel.calls = 0
+    imatrix_calls = []
+    arc_item = dict(item, task="arc_challenge", subject="arc")
+    eval_tasks.AutoTokenizer = CountingTokenizer
+    eval_tasks.AutoModelForCausalLM = CountingModel
+    eval_tasks.load_mmlu_stratified = lambda _limit: [item] * 570
+    eval_tasks.load_arc = lambda _limit: [arc_item] * 230
+    eval_tasks.item_fingerprint = lambda _items: "wrong-fingerprint"
+    eval_tasks.torch.load = lambda *_args, **_kwargs: imatrix_calls.append(1) or {}
+    original_argv = sys.argv
+    sys.argv = ["eval_tasks.py", *strict_cli, "--out", str(Path(tmp) / "strict-report.json")]
+    try:
+        eval_tasks.main()
+    except RuntimeError as exc:
+        if STRICT_PROTOCOL_FINGERPRINT not in str(exc):
+            failures.append("strict fingerprint error omitted the required fingerprint")
+    else:
+        failures.append("strict protocol accepted the wrong ordered item fingerprint")
+    finally:
+        sys.argv = original_argv
+    if CountingTokenizer.calls or CountingModel.calls or imatrix_calls:
+        failures.append("strict fingerprint failure reached paid tokenizer/imatrix/model loading")
+
+eval_tasks.AutoTokenizer = validation_originals["AutoTokenizer"]
+eval_tasks.AutoModelForCausalLM = validation_originals["AutoModelForCausalLM"]
+eval_tasks.load_mmlu = validation_originals["load_mmlu"]
+eval_tasks.load_mmlu_stratified = validation_originals["load_mmlu_stratified"]
+eval_tasks.load_arc = validation_originals["load_arc"]
+eval_tasks.item_fingerprint = validation_originals["item_fingerprint"]
+eval_tasks.run_arm = validation_originals["run_arm"]
+eval_tasks.torch.load = validation_originals["torch_load"]
 
 
 originals = {
@@ -294,10 +537,23 @@ with tempfile.TemporaryDirectory() as tmp:
             failures.append("mismatched cache did not trigger exactly one recomputation")
         if report_payload["provenance"]["dense"] != cache_payload["provenance"]:
             failures.append("report provenance does not match cache provenance")
+        if report_payload["execution"]["dense"] != cache_payload.get("execution"):
+            failures.append("report execution evidence does not match cache evidence")
+        execution = cache_payload.get("execution", {})
+        expected_distribution = {"torch.float16": 2}
+        if execution.get("parameter_elements_by_dtype_before_plan") != expected_distribution:
+            failures.append("cache is missing the pre-plan parameter dtype distribution")
+        if execution.get("parameter_elements_by_dtype_after_plan") != expected_distribution:
+            failures.append("cache is missing the post-plan parameter dtype distribution")
+        if set(report_payload.get("runtime", {})) != required_runtime_fields:
+            failures.append("final report is missing runtime identity")
 
         eval_tasks.main()
         if len(model_loads) != 1:
             failures.append("matching cache was recomputed instead of reused")
+        reused_report = json.loads(out.read_text(encoding="utf-8"))
+        if reused_report["execution"]["dense"] != execution:
+            failures.append("cache reuse did not propagate arm execution evidence")
     finally:
         sys.argv = original_argv
         eval_tasks.AutoTokenizer = originals["AutoTokenizer"]
@@ -318,6 +574,9 @@ print("  prompt renders all four options and the answer cue")
 print("  argmax over per-letter log-likelihood picks the favored option in all 4 cases")
 print("  MMLU stratifies 10 each across 57 subjects; ARC selects 230 valid items")
 print("  dataset revisions are pinned and ambiguous MMLU CLI is rejected")
+print("  partial/zero loads fail before paid loading and invalid answers are rejected")
+print("  strict protocol tuple and ordered fingerprint are enforced before paid loading")
+print("  runtime identity and per-arm dtype evidence persist across cache reuse")
 print("  cache reuse requires exact provenance and deterministic item fingerprint")
 print("  mismatched cache recomputes; report and cache provenance match")
 print("  no GPU, no network, no model download required")

@@ -3,9 +3,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import platform
 from pathlib import Path
 
+import datasets
 import torch
+import transformers
 from datasets import load_dataset
 from eval_mixed import apply_plan
 from task_accuracy import compare
@@ -15,6 +18,11 @@ LETTERS = ["A", "B", "C", "D"]
 MMLU_DATASET_REVISION = "c30699e8356da336a370243923dbaf21066bb9fe"
 ARC_DATASET_REVISION = "210d026faf9955653af8916fad021475a3f00453"
 MMLU_SUBJECT_COUNT = 57
+STRICT_PROTOCOL = "qwen38_bf16_800"
+STRICT_PROTOCOL_MODEL = "Qwen/Qwen3.8-27B"
+STRICT_PROTOCOL_REVISION = "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"
+STRICT_PROTOCOL_FINGERPRINT = "a72515282c6fc20f34188b3102d99468ab2b02266105ed9c6e4ec405fbad8fd0"
+STRICT_PROTOCOL_ARMS = ["dense", "dense_iq3_ref"]
 
 
 def item_fingerprint(items):
@@ -24,8 +32,55 @@ def item_fingerprint(items):
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def runtime_identity(device, requested_dtype):
+    gpu = None
+    if device == "cuda":
+        gpu = {
+            "name": torch.cuda.get_device_name(0),
+            "capability": list(torch.cuda.get_device_capability(0)),
+        }
+    return {
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+        "gpu": gpu,
+        "torch": torch.__version__,
+        "cuda": torch.version.cuda,
+        "transformers": transformers.__version__,
+        "datasets": datasets.__version__,
+        "device": device,
+        "requested_dtype": requested_dtype,
+    }
+
+
+def parameter_dtype_distribution(model):
+    distribution = {}
+    for parameter in model.parameters():
+        if not parameter.is_floating_point():
+            continue
+        dtype = str(parameter.dtype)
+        distribution[dtype] = distribution.get(dtype, 0) + parameter.numel()
+    return dict(sorted(distribution.items()))
+
+
+def validate_bfloat16_distribution(distribution, arm):
+    if set(distribution) != {"torch.bfloat16"} or distribution["torch.bfloat16"] <= 0:
+        raise RuntimeError(
+            "strict BF16 arm %s loaded floating parameter elements by dtype %s"
+            % (arm, distribution)
+        )
+
+
 def cache_provenance(
-    model, revision, dtype, mmlu, arc, low_layers, arm, sampling_scheme, fingerprint
+    model,
+    revision,
+    dtype,
+    mmlu,
+    arc,
+    low_layers,
+    arm,
+    sampling_scheme,
+    fingerprint,
+    runtime,
 ):
     return {
         "model": model,
@@ -41,10 +96,11 @@ def cache_provenance(
             "allenai/ai2_arc": ARC_DATASET_REVISION,
         },
         "ordered_item_fingerprint": fingerprint,
+        "runtime": runtime,
     }
 
 
-def load_cached_correct(path, provenance, item_count):
+def load_cached_result(path, provenance, item_count):
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
@@ -52,13 +108,29 @@ def load_cached_correct(path, provenance, item_count):
     if not isinstance(payload, dict):
         return None
     correct = payload.get("correct")
+    execution = payload.get("execution")
     if payload.get("provenance") != provenance:
         return None
     if not isinstance(correct, list) or len(correct) != item_count:
         return None
     if any(type(value) is not int or value not in (0, 1) for value in correct):
         return None
-    return correct
+    required_execution = {
+        "requested_dtype",
+        "parameter_elements_by_dtype_before_plan",
+        "parameter_elements_by_dtype_after_plan",
+        "plan_stats",
+    }
+    if not isinstance(execution, dict) or set(execution) != required_execution:
+        return None
+    if execution["requested_dtype"] != provenance["dtype"]:
+        return None
+    return correct, execution
+
+
+def load_cached_correct(path, provenance, item_count):
+    cached = load_cached_result(path, provenance, item_count)
+    return None if cached is None else cached[0]
 
 
 def single_token_letters(tokenizer):
@@ -73,18 +145,21 @@ def single_token_letters(tokenizer):
 
 def mmlu_item(row):
     choices = row.get("choices") or []
-    if len(choices) != 4:
+    answer = row.get("answer")
+    if len(choices) != 4 or type(answer) is not int or answer not in range(4):
         return None
     return {
         "task": "mmlu",
         "subject": row.get("subject", ""),
         "question": (row.get("question") or "").strip(),
         "choices": [str(c).strip() for c in choices],
-        "answer": int(row["answer"]),
+        "answer": answer,
     }
 
 
 def load_mmlu(limit, subjects=None):
+    if limit == 0:
+        return []
     dataset = load_dataset(
         "cais/mmlu",
         "all",
@@ -137,6 +212,8 @@ def load_mmlu_stratified(per_subject):
 
 
 def load_arc(limit):
+    if limit == 0:
+        return []
     dataset = load_dataset(
         "allenai/ai2_arc",
         "ARC-Challenge",
@@ -163,6 +240,21 @@ def load_arc(limit):
         if len(items) >= limit:
             break
     return items
+
+
+def validate_item_counts(mmlu_items, arc_items, expected_mmlu, expected_arc):
+    if len(mmlu_items) != expected_mmlu:
+        raise RuntimeError(
+            "expected %d MMLU items, loaded %d" % (expected_mmlu, len(mmlu_items))
+        )
+    if len(arc_items) != expected_arc:
+        raise RuntimeError("expected %d ARC items, loaded %d" % (expected_arc, len(arc_items)))
+    expected_total = expected_mmlu + expected_arc
+    actual_total = len(mmlu_items) + len(arc_items)
+    if actual_total != expected_total:
+        raise RuntimeError("expected %d total items, loaded %d" % (expected_total, actual_total))
+    if actual_total == 0:
+        raise RuntimeError("evaluation requires at least one item")
 
 
 def render(item):
@@ -286,6 +378,27 @@ def build_plans(low_layers):
     }
 
 
+def validate_protocol(args):
+    if args.protocol == "generic":
+        return
+    selected = [name.strip() for name in args.arms.split(",") if name.strip()]
+    required = {
+        "model": (args.model, STRICT_PROTOCOL_MODEL),
+        "revision": (args.revision, STRICT_PROTOCOL_REVISION),
+        "dtype": (args.dtype, "bfloat16"),
+        "mmlu_per_subject": (args.mmlu_per_subject, 10),
+        "arc": (args.arc, 230),
+        "arms": (selected, STRICT_PROTOCOL_ARMS),
+    }
+    mismatches = [
+        "%s=%r (required %r)" % (field, actual, expected)
+        for field, (actual, expected) in required.items()
+        if actual != expected
+    ]
+    if mismatches:
+        raise ValueError("protocol %s requires %s" % (STRICT_PROTOCOL, "; ".join(mismatches)))
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="paired task accuracy across quantization arms")
     parser.add_argument("--model", required=True)
@@ -298,6 +411,7 @@ def parse_args(argv=None):
     parser.add_argument("--low-layers", type=int, default=6)
     parser.add_argument("--arms", default="dense,mixed_stq,mixed_ltc")
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
+    parser.add_argument("--protocol", choices=("generic", STRICT_PROTOCOL), default="generic")
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
     if args.mmlu is None and args.mmlu_per_subject is None:
@@ -313,10 +427,7 @@ def parse_args(argv=None):
 
 def main() -> int:
     args = parse_args()
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    tokenizer = AutoTokenizer.from_pretrained(args.model, revision=args.revision)
-    importance = torch.load(Path(args.imatrix).with_suffix(".pt"), map_location="cpu")
+    validate_protocol(args)
 
     if args.mmlu_per_subject is None:
         mmlu_items = load_mmlu(args.mmlu)
@@ -332,13 +443,24 @@ def main() -> int:
             "count": mmlu_count,
         }
     arc_items = load_arc(args.arc)
+    validate_item_counts(mmlu_items, arc_items, mmlu_count, args.arc)
     items = mmlu_items + arc_items
     sampling_scheme = {
         "mmlu": mmlu_sampling,
         "arc": {"mode": "valid_4_choice_prefix", "count": args.arc},
     }
-    print("items: %d (mmlu %d, arc %d)" % (len(items), mmlu_count, args.arc), flush=True)
     fingerprint = item_fingerprint(items)
+    if args.protocol == STRICT_PROTOCOL and fingerprint != STRICT_PROTOCOL_FINGERPRINT:
+        raise RuntimeError(
+            "protocol %s expected ordered item fingerprint %s, got %s"
+            % (STRICT_PROTOCOL, STRICT_PROTOCOL_FINGERPRINT, fingerprint)
+        )
+    print("items: %d (mmlu %d, arc %d)" % (len(items), mmlu_count, args.arc), flush=True)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    runtime = runtime_identity(device, args.dtype)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, revision=args.revision)
+    importance = torch.load(Path(args.imatrix).with_suffix(".pt"), map_location="cpu")
 
     plans = build_plans(args.low_layers)
     selected = [name.strip() for name in args.arms.split(",") if name.strip()]
@@ -346,6 +468,7 @@ def main() -> int:
     results = {}
     details = {}
     provenance_by_arm = {}
+    execution_by_arm = {}
     cache_dir = Path(args.out).parent
     for name in selected:
         if name not in plans:
@@ -360,13 +483,16 @@ def main() -> int:
             name,
             sampling_scheme,
             fingerprint,
+            runtime,
         )
         provenance_by_arm[name] = provenance
         cached = cache_dir / ("correct_%s.json" % name)
         if cached.is_file():
-            correct = load_cached_correct(cached, provenance, len(items))
-            if correct is not None:
+            cached_result = load_cached_result(cached, provenance, len(items))
+            if cached_result is not None:
+                correct, execution = cached_result
                 results[name] = correct
+                execution_by_arm[name] = execution
                 details[name] = {"accuracy": sum(correct) / len(correct), "correct": sum(correct)}
                 print("[arm] %s reused from %s" % (name, cached.name), flush=True)
                 continue
@@ -380,6 +506,10 @@ def main() -> int:
             device_map={"": device},
         )
         model.eval()
+        before_plan = parameter_dtype_distribution(model)
+        if args.protocol == STRICT_PROTOCOL:
+            validate_bfloat16_distribution(before_plan, name)
+        plan_stats = None
         if name != "dense":
             plan_stats = apply_plan(model, importance, plans[name], device)
             if plan_stats["params"] == 0:
@@ -390,12 +520,24 @@ def main() -> int:
                 )
             print("  bpw %.4f mean_error %.4f" % (plan_stats["bpw"], plan_stats["mean_error"]),
                   flush=True)
+        execution = {
+            "requested_dtype": args.dtype,
+            "parameter_elements_by_dtype_before_plan": before_plan,
+            "parameter_elements_by_dtype_after_plan": parameter_dtype_distribution(model),
+            "plan_stats": plan_stats,
+        }
         correct = run_arm(model, tokenizer, items, device)
         results[name] = correct
+        execution_by_arm[name] = execution
         accuracy = sum(correct) / len(correct)
         details[name] = {"accuracy": accuracy, "correct": sum(correct)}
         cached.write_text(
-            json.dumps({"provenance": provenance, "correct": correct}), encoding="utf-8"
+            json.dumps({
+                "provenance": provenance,
+                "execution": execution,
+                "correct": correct,
+            }),
+            encoding="utf-8",
         )
         print("  accuracy %.4f (%d/%d)" % (accuracy, sum(correct), len(correct)), flush=True)
         del model
@@ -403,7 +545,9 @@ def main() -> int:
             torch.cuda.empty_cache()
 
     report = compare(results, "dense")
+    report["runtime"] = runtime
     report["provenance"] = provenance_by_arm
+    report["execution"] = execution_by_arm
     report["correct_vectors"] = results
     report["items_detail"] = [
         {"task": i["task"], "subject": i["subject"]} for i in items
@@ -416,6 +560,7 @@ def main() -> int:
         "mmlu_per_subject": args.mmlu_per_subject,
         "arc": args.arc,
         "dtype": args.dtype,
+        "protocol": args.protocol,
         "sampling_scheme": sampling_scheme,
         "dataset_revisions": {
             "cais/mmlu": MMLU_DATASET_REVISION,

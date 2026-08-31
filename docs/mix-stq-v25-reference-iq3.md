@@ -98,6 +98,35 @@ v19–v23 결과는 탐색 기록으로 남기되, 저장 가능한 IQ 형식이
 5. **배포 벤치마크**: 위 네 게이트를 통과한 GGUF만 llama.cpp와
    Terminal Bench 2.1 자유형식 full 평가로 보냅니다.
 
+### 현재 연구 종료 후 4–5 bpw 확장
+
+위 1–4번 게이트가 끝나면 3 bpw 후보만 평가하지 않고, 표준 4–5비트 계열을
+배포 대조군으로 함께 변환합니다. 포맷 이름의 비트 수를 실제 bpw로 간주하지 않고
+`GGUF 파일 비트 / 전체 파라미터 수`인 배포 bpw와 양자화 payload만의 bpw를
+분리해 보고합니다.
+
+| 예산 구간 | 우선 후보 | 역할 |
+|---|---|---|
+| 약 4.25 bpw | `IQ4_XS` | 저용량 4비트 기준선 |
+| 약 4.5–5.0 bpw | `Q4_K_M` | 일반 배포용 품질 기준선 |
+| 5비트 계열 | `Q5_K_M` | 용량을 더 쓴 품질 상한 대조군 |
+
+최종 포맷은 고정한 llama.cpp 커밋이 Qwen3.8 구조를 지원하는지 확인한 뒤 확정하며,
+실제 bpw가 목표 구간을 벗어나면 이름을 근거로 반올림하지 않고 별도 점으로 표시합니다.
+
+각 GGUF는 동일한 원본 revision과 tokenizer에서 만들고 SHA-256, 파일 크기, 실제 bpw,
+양자화 텐서 목록을 manifest로 묶습니다. 다음 순서로 같은 파일을 평가합니다.
+
+1. 800문항 이상 paired MMLU·ARC 정확도와 사전 등록 비열등 마진
+2. held-out perplexity와 FP16/BF16 기준선 대비 변화
+3. `llama-bench` prompt·generation tok/s, 로드 시간, peak RAM·VRAM
+4. 32,768-token GPQA Diamond 자유형식과 Terminal Bench 2.1 full
+5. 같은 축의 Top-1·속도·메모리 차트와 Hugging Face GGUF 보존
+
+GGUF 왕복 또는 C 디코더 패리티가 실패한 파일은 벤치마크 대상으로 인정하지 않습니다.
+Terminal Bench 결과도 부분 실행과 full 실행을 섞지 않고, 완료율과 총 소요 시간을
+각 양자화 팔별로 함께 기록합니다.
+
 ### 검증 로그
 
 | 주장 | 근거 | 상태 |
@@ -119,5 +148,5 @@ v19–v23 결과는 탐색 기록으로 남기되, 저장 가능한 IQ 형식이
 - attention, embedding, lm_head를 포함한 전체 모델 양자화
 - IQ3 packed GGUF, ggml C 디코더 패리티, llama.cpp 실행
 - Terminal Bench 2.1, 완전한 32,768-token GPQA Diamond
+- 4–5비트 계열 GGUF 변환과 동일 하네스 벤치마크
 - 최종 인스턴스 비용: 평가 프로세스는 약 39분이었지만 종료 전 비용 영수증을 저장하지 않음
-

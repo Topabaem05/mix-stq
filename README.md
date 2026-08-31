@@ -128,6 +128,18 @@ a plausible-looking null result.
 - Generation quality remains unmeasured: the 32,768-token GPQA run and
   Terminal Bench 2.1 full evaluation have not completed.
 
+## Planned 4–5 bpw deployment controls
+
+After the reference-encoder, 800+ item, GGUF round-trip, and C-parity gates are
+closed, the same Qwen revision will be converted to `IQ4_XS`, `Q4_K_M`, and a
+`Q5_K_M` quality control. Reports will separate physical file bits per total
+model parameter from quantized-payload bits per covered parameter instead of
+inferring either value from the preset name.
+
+Every surviving file will run the same paired accuracy set, perplexity,
+`llama-bench` throughput and memory measurements, 32,768-token GPQA, and full
+Terminal Bench 2.1. Partial and full runs will remain separate results.
+
 ## Repository layout
 
 ```

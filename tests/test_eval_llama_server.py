@@ -95,6 +95,10 @@ def _completion_body(
     token_id = LETTER_IDS[letter_index]
     if logprobs is None:
         logprobs = [-0.5 - position for position in range(len(top_ids))]
+    pieces = [
+        NATURAL_TOP_PIECES[position] if position < len(NATURAL_TOP_PIECES) else " piece%d" % position
+        for position in range(len(top_ids))
+    ]
     return {
         "content": " " + evaluator.LETTERS[letter_index],
         "tokens": [token_id] if tokens is None else list(tokens),
@@ -106,7 +110,7 @@ def _completion_body(
                 "top_logprobs": [
                     {"id": candidate, "token": piece, "logprob": logprob}
                     for candidate, piece, logprob in zip(
-                        top_ids, NATURAL_TOP_PIECES, logprobs, strict=False
+                        top_ids, pieces, logprobs, strict=True
                     )
                 ],
             }
@@ -383,6 +387,57 @@ def test_records_a_null_diagnostic_logprob_verbatim(
         running.close()
 
     assert result["records"][0]["pre_sampling_top_logprobs"] == [-1.25, None, -2.5, -3.5]
+
+
+def _reject_top_logprobs_arity(tmp_path: Path, mmlu, arc, top_ids, name: str) -> None:
+    """The pinned contract requires exactly four diagnostic entries; any other arity stops."""
+
+    def wrong_arity(path: str, body: dict[str, object]):
+        if path == "/completion":
+            return 200, _completion_body(0, top_ids=top_ids)
+        return _default_responder(path, body)
+
+    running = _FakeServer(wrong_arity)
+    out = tmp_path / name
+    try:
+        with pytest.raises(evaluator.EvaluationError, match="requires exactly 4"):
+            _run(running.url, out, mmlu, arc)
+    finally:
+        running.close()
+
+    paths = evaluator.artifact_paths(out)
+    assert not paths["result"].exists()
+    assert not paths["completion"].exists()
+
+
+def test_rejects_an_empty_top_logprobs_list(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+
+    _reject_top_logprobs_arity(tmp_path, mmlu, arc, (), "empty.json")
+
+
+def test_rejects_a_single_entry_top_logprobs_list(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+
+    # The collapsed post_sampling_probs shape observed in the 2026-09-02 probe.
+    _reject_top_logprobs_arity(tmp_path, mmlu, arc, (LETTER_IDS[0],), "single.json")
+
+
+def test_rejects_a_seven_entry_top_logprobs_list(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+
+    _reject_top_logprobs_arity(
+        tmp_path, mmlu, arc, (*NATURAL_TOP_IDS, 5001, 5002, 5003), "seven.json"
+    )
 
 
 def test_candidate_set_top_four_is_still_accepted(

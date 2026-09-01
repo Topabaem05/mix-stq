@@ -291,6 +291,11 @@ def _pre_sampling_top(entry: object) -> tuple[list[int], list[float | None]]:
             )
         ids.append(int(token))
         logprobs.append(_diagnostic_logprob(candidate.get("logprob")))
+    if len(ids) != len(LETTERS):
+        raise EvaluationError(
+            f"llama-server returned {len(ids)} {TOP_PROBS_KEY} entries; the pinned contract "
+            f"requires exactly {len(LETTERS)}"
+        )
     return ids, logprobs
 
 
@@ -408,6 +413,7 @@ def validate_record(
         or prediction not in range(len(LETTERS))
         or record.get("correct") != int(prediction == item["answer"])
         or record.get("tokens") != [int(letter_ids[prediction])]
+        or len(top_ids) != len(LETTERS)
         or not isinstance(top_logprobs, list)
         or len(top_logprobs) != len(top_ids)
         or any(

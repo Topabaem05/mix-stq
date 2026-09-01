@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import importlib
 import json
@@ -33,7 +34,9 @@ LETTER_BIAS = 100.0
 DEFAULT_TIMEOUT_SECONDS = 600.0
 SHA256_CHUNK_BYTES = 1024 * 1024
 MODEL_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
-TOP_PROB_KEYS = ("top_logprobs", "top_probs", "probs")
+# The pinned llama.cpp commit emits exactly one candidate-probability field; accepting a
+# second spelling would let a response-shape change silently select a different field.
+TOP_PROBS_KEY = "top_logprobs"
 
 _EVAL_TASKS_MODULE = None
 
@@ -250,14 +253,11 @@ def request_contract() -> dict[str, object]:
 def _top_token_ids(entry: object) -> list[int]:
     if not isinstance(entry, Mapping):
         raise EvaluationError("llama-server completion probabilities are malformed")
-    candidates = None
-    for key in TOP_PROB_KEYS:
-        value = entry.get(key)
-        if isinstance(value, list):
-            candidates = value
-            break
-    if candidates is None:
-        raise EvaluationError("llama-server did not return top-4 candidate probabilities")
+    candidates = entry.get(TOP_PROBS_KEY)
+    if not isinstance(candidates, list):
+        raise EvaluationError(
+            f"llama-server completion probabilities lack the pinned {TOP_PROBS_KEY} list"
+        )
     ids = []
     for candidate in candidates:
         if not isinstance(candidate, Mapping) or isinstance(candidate.get("id"), bool):
@@ -293,24 +293,6 @@ def score_completion(response: Mapping[str, object], letter_ids: Sequence[int]) 
     return {"prediction": prediction, "tokens": tokens, "top_token_ids": top_ids}
 
 
-def _validate_items(items: Sequence[Mapping[str, object]]) -> None:
-    for index, item in enumerate(items):
-        choices = item.get("choices") if isinstance(item, Mapping) else None
-        answer = item.get("answer") if isinstance(item, Mapping) else None
-        if (
-            not isinstance(item, Mapping)
-            or not isinstance(item.get("task"), str)
-            or not isinstance(item.get("subject"), str)
-            or not isinstance(item.get("question"), str)
-            or not isinstance(choices, list)
-            or len(choices) != len(LETTERS)
-            or isinstance(answer, bool)
-            or not isinstance(answer, int)
-            or answer not in range(len(LETTERS))
-        ):
-            raise EvaluationError(f"item {index} does not match the pinned 800-item schema")
-
-
 def load_items(mmlu_loader=None, arc_loader=None) -> list[dict[str, object]]:
     """Load the pinned 570 MMLU and 230 ARC items and enforce the ordered fingerprint."""
 
@@ -330,7 +312,8 @@ def load_items(mmlu_loader=None, arc_loader=None) -> list[dict[str, object]]:
     except (RuntimeError, ValueError, OSError) as error:
         raise EvaluationError(f"pinned 800-item load failed: {error}") from error
     items = mmlu_items + arc_items
-    _validate_items(items)
+    # The preregistered ordered fingerprint is the authoritative item gate; no weaker
+    # schema check runs in front of it.
     fingerprint = tasks.item_fingerprint(items)
     if fingerprint != ITEM_FINGERPRINT:
         raise EvaluationError(
@@ -479,7 +462,12 @@ def run_evaluation(
             "refusing to overwrite a completed result: "
             + ", ".join(str(paths[name]) for name in completed)
         )
-    state: dict[str, object] = {"run_id": uuid.uuid4().hex, "records": [], "arm": arm}
+    state: dict[str, object] = {
+        "run_id": uuid.uuid4().hex,
+        "records": [],
+        "arm": arm,
+        "progress_owned": False,
+    }
     try:
         return _execute(
             server=server,
@@ -493,7 +481,9 @@ def run_evaluation(
             state=state,
         )
     except BaseException as error:
-        _record_failure(paths, state, error)
+        # Recording the failure must never replace the error the caller has to see.
+        with contextlib.suppress(OSError, ValueError):
+            _record_failure(paths, state, error)
         raise
 
 
@@ -501,7 +491,6 @@ def _record_failure(paths: Mapping[str, Path], state: Mapping[str, object], erro
     run_id = state["run_id"]
     arm = state["arm"]
     records = state["records"]
-    provenance = state.get("provenance")
     _write_json_atomic(
         paths["failure"],
         {
@@ -514,7 +503,10 @@ def _record_failure(paths: Mapping[str, Path], state: Mapping[str, object], erro
             "error": str(error),
         },
     )
-    if provenance is not None:
+    # Progress is only rewritten by the run that owns the stored provenance; a refused
+    # resume must leave another run's scored records byte-identical on disk.
+    if state.get("progress_owned"):
+        provenance = state["provenance"]
         _write_json_atomic(
             paths["progress"],
             _progress_payload(
@@ -526,6 +518,25 @@ def _record_failure(paths: Mapping[str, Path], state: Mapping[str, object], erro
                 {"error_type": type(error).__name__, "error": str(error)},
             ),
         )
+
+
+def _supersede_failure(paths: Mapping[str, Path], run_id: object) -> None:
+    """Drop this run's failure artifact once its result and marker are published.
+
+    A completed evidence bundle must never carry a failed record with the same run_id.
+    A failure written by any other run is left untouched.
+    """
+
+    path = paths["failure"]
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return
+    if isinstance(payload, Mapping) and payload.get("run_id") == run_id:
+        with contextlib.suppress(OSError):
+            path.unlink()
+        with contextlib.suppress(OSError):
+            _fsync_directory(path.parent)
 
 
 def _execute(
@@ -552,13 +563,16 @@ def _execute(
         EXPECTED_MMLU_ITEMS,
         EXPECTED_ARC_ITEMS,
     )
-    state["provenance"] = provenance
     progress = _load_progress(paths["progress"])
     records: list[dict[str, object]] = []
     if progress is not None:
         run_id, records = _resume_records(progress, provenance, items, letter_ids)
         state["run_id"] = run_id
+    # Only after the stored progress is reconciled with this provenance may the failure
+    # path touch the progress file; a refused resume leaves the existing evidence intact.
+    state["provenance"] = provenance
     state["records"] = records
+    state["progress_owned"] = True
     resumed_items = len(records)
     started_epoch = time.time()
     started = time.monotonic()
@@ -637,6 +651,7 @@ def _execute(
             "result_sha256": sha256_file(paths["result"]),
         },
     )
+    _supersede_failure(paths, state["run_id"])
     _write_json_atomic(
         paths["progress"],
         _progress_payload(state["run_id"], arm, provenance, validated, "complete"),

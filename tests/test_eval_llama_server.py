@@ -110,6 +110,12 @@ def _default_responder(path: str, body: dict[str, object]):
     return 200, _completion_body(0)
 
 
+def _fail_on_third_item(path: str, body: dict[str, object]):
+    if path == "/completion" and str(body["prompt"]).startswith("mmlu question 2"):
+        raise _FakeServerFailure("induced protocol failure")
+    return _default_responder(path, body)
+
+
 class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -343,6 +349,30 @@ def test_rejects_a_top_four_set_outside_the_candidate_set(
         running.close()
 
 
+def test_rejects_a_response_without_the_pinned_top_logprobs_field(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+
+    def renamed(path: str, body: dict[str, object]):
+        if path == "/completion":
+            payload = _completion_body(0)
+            entry = payload["completion_probabilities"][0]
+            entry["probs"] = entry.pop("top_logprobs")
+            return 200, payload
+        return _default_responder(path, body)
+
+    running = _FakeServer(renamed)
+    out = tmp_path / "renamed.json"
+    try:
+        with pytest.raises(evaluator.EvaluationError, match="top_logprobs"):
+            _run(running.url, out, mmlu, arc)
+    finally:
+        running.close()
+    assert not evaluator.artifact_paths(out)["result"].exists()
+
+
 def test_wrong_fingerprint_is_rejected_before_any_request(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, server: _FakeServer
 ) -> None:
@@ -379,12 +409,7 @@ def test_partial_progress_is_not_promoted_and_resume_continues(
     out = tmp_path / "resume.json"
     paths = evaluator.artifact_paths(out)
 
-    def fail_third(path: str, body: dict[str, object]):
-        if path == "/completion" and str(body["prompt"]).startswith("mmlu question 2"):
-            raise _FakeServerFailure("induced protocol failure")
-        return _default_responder(path, body)
-
-    running = _FakeServer(fail_third)
+    running = _FakeServer(_fail_on_third_item)
     try:
         with pytest.raises(evaluator.EvaluationError):
             _run(running.url, out, mmlu, arc)
@@ -420,17 +445,14 @@ def test_resume_rejects_a_provenance_mismatch(
     out = tmp_path / "mismatch.json"
     paths = evaluator.artifact_paths(out)
 
-    def fail_third(path: str, body: dict[str, object]):
-        if path == "/completion" and str(body["prompt"]).startswith("mmlu question 2"):
-            raise _FakeServerFailure("induced protocol failure")
-        return _default_responder(path, body)
-
-    running = _FakeServer(fail_third)
+    running = _FakeServer(_fail_on_third_item)
     try:
         with pytest.raises(evaluator.EvaluationError):
             _run(running.url, out, mmlu, arc)
     finally:
         running.close()
+
+    stored = paths["progress"].read_text(encoding="utf-8")
 
     resumed = _FakeServer()
     try:
@@ -442,6 +464,106 @@ def test_resume_rejects_a_provenance_mismatch(
 
     assert not paths["result"].exists()
     assert not paths["completion"].exists()
+    progress = json.loads(paths["progress"].read_text(encoding="utf-8"))
+    assert paths["progress"].read_text(encoding="utf-8") == stored
+    assert progress["provenance"]["model_sha256"] == MODEL_SHA256
+    assert progress["completed_items"] == 2
+    assert len(progress["records"]) == 2
+
+
+def test_refused_resume_preserves_the_stored_progress_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+    out = tmp_path / "preserved.json"
+    paths = evaluator.artifact_paths(out)
+
+    running = _FakeServer(_fail_on_third_item)
+    try:
+        with pytest.raises(evaluator.EvaluationError):
+            _run(running.url, out, mmlu, arc)
+    finally:
+        running.close()
+
+    stored = paths["progress"].read_text(encoding="utf-8")
+    before = json.loads(stored)
+    assert before["completed_items"] == 2
+    assert before["provenance"]["model_sha256"] == MODEL_SHA256
+
+    refused = _FakeServer()
+    try:
+        with pytest.raises(evaluator.EvaluationError, match="provenance"):
+            _run(refused.url, out, mmlu, arc, model_sha256="c" * 64)
+    finally:
+        refused.close()
+
+    assert paths["progress"].read_text(encoding="utf-8") == stored
+    after = json.loads(paths["progress"].read_text(encoding="utf-8"))
+    assert after["provenance"] == before["provenance"]
+    assert after["records"] == before["records"]
+    assert after["run_id"] == before["run_id"]
+    assert not paths["result"].exists()
+    assert not paths["completion"].exists()
+
+    resumed = _FakeServer()
+    try:
+        result = _run(resumed.url, out, mmlu, arc)
+        assert len(resumed.completions()) == 3
+    finally:
+        resumed.close()
+
+    assert result["run_id"] == before["run_id"]
+    assert result["resumed_items"] == 2
+    assert len(result["records"]) == 5
+    assert result["records"][:2] == before["records"]
+    assert paths["completion"].is_file()
+
+
+def test_completed_run_supersedes_its_own_failure_artifact(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+    out = tmp_path / "superseded.json"
+    paths = evaluator.artifact_paths(out)
+
+    running = _FakeServer(_fail_on_third_item)
+    try:
+        with pytest.raises(evaluator.EvaluationError):
+            _run(running.url, out, mmlu, arc)
+    finally:
+        running.close()
+
+    failure = json.loads(paths["failure"].read_text(encoding="utf-8"))
+    assert failure["status"] == "failed"
+    failed_run_id = failure["run_id"]
+
+    resumed = _FakeServer()
+    try:
+        result = _run(resumed.url, out, mmlu, arc)
+    finally:
+        resumed.close()
+
+    assert result["run_id"] == failed_run_id
+    assert result["status"] == "complete"
+    assert not paths["failure"].exists()
+    assert json.loads(paths["progress"].read_text(encoding="utf-8"))["status"] == "complete"
+
+
+def test_a_foreign_failure_artifact_is_not_removed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, server: _FakeServer
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+    out = tmp_path / "foreign.json"
+    paths = evaluator.artifact_paths(out)
+    foreign = {"run_id": "another-run", "status": "failed"}
+    paths["failure"].write_text(json.dumps(foreign), encoding="utf-8")
+
+    _run(server.url, out, mmlu, arc)
+
+    assert json.loads(paths["failure"].read_text(encoding="utf-8")) == foreign
 
 
 def test_refuses_to_overwrite_a_completed_result(

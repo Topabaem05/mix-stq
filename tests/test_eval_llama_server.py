@@ -33,6 +33,9 @@ import pytest  # noqa: E402
 MODEL_SHA256 = "b" * 64
 LLAMA_COMMIT = evaluator.LLAMA_CPP_COMMIT
 LETTER_IDS = (1100, 1101, 1102, 1103)
+# Observed pre-sampling, unbiased top-4 from the 2026-09-02 pinned-commit probe.
+NATURAL_TOP_IDS = (12095, 1304, 30743, 32671)
+NATURAL_TOP_PIECES = (" Paris", " __", " ____", " ______")
 
 
 def _mmlu_items(count: int) -> list[dict[str, object]]:
@@ -80,8 +83,18 @@ def _configure(
     )
 
 
-def _completion_body(letter_index: int, *, top_ids=LETTER_IDS, tokens=None) -> dict[str, object]:
+def _completion_body(
+    letter_index: int, *, top_ids=NATURAL_TOP_IDS, tokens=None, logprobs=None
+) -> dict[str, object]:
+    """Mirror the pinned server: the sampled token is biased, top_logprobs is not.
+
+    The default top_logprobs list is the observed pre-sampling, unbiased top-4 from the
+    2026-09-02 probe (amendment 1), not the candidate letter set.
+    """
+
     token_id = LETTER_IDS[letter_index]
+    if logprobs is None:
+        logprobs = [-0.5 - position for position in range(len(top_ids))]
     return {
         "content": " " + evaluator.LETTERS[letter_index],
         "tokens": [token_id] if tokens is None else list(tokens),
@@ -89,10 +102,12 @@ def _completion_body(letter_index: int, *, top_ids=LETTER_IDS, tokens=None) -> d
             {
                 "id": token_id,
                 "token": " " + evaluator.LETTERS[letter_index],
-                "logprob": -0.01,
+                "logprob": -6.78,
                 "top_logprobs": [
-                    {"id": candidate, "token": "x", "logprob": -0.5 - position}
-                    for position, candidate in enumerate(top_ids)
+                    {"id": candidate, "token": piece, "logprob": logprob}
+                    for candidate, piece, logprob in zip(
+                        top_ids, NATURAL_TOP_PIECES, logprobs, strict=False
+                    )
                 ],
             }
         ],
@@ -330,23 +345,64 @@ def test_rejects_a_completion_token_outside_the_candidate_set(
     assert not evaluator.artifact_paths(out)["result"].exists()
 
 
-def test_rejects_a_top_four_set_outside_the_candidate_set(
+def test_records_the_natural_pre_sampling_top_four_without_rejecting_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, server: _FakeServer
+) -> None:
+    """Amendment 1: top_logprobs is pre-sampling and unbiased, so it is recorded, not gated."""
+
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+    out = tmp_path / "natural.json"
+
+    result = _run(server.url, out, mmlu, arc)
+
+    assert len(result["records"]) == 5
+    for record in result["records"]:
+        assert record["pre_sampling_top_ids"] == list(NATURAL_TOP_IDS)
+        assert record["pre_sampling_top_logprobs"] == [-0.5, -1.5, -2.5, -3.5]
+        assert record["tokens"] == [LETTER_IDS[0]]
+    assert sorted(NATURAL_TOP_IDS) != sorted(LETTER_IDS)
+    assert evaluator.artifact_paths(out)["completion"].is_file()
+
+
+def test_records_a_null_diagnostic_logprob_verbatim(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     mmlu, arc = _mmlu_items(3), _arc_items(2)
     _configure(monkeypatch, mmlu, arc)
 
-    def outsider(path: str, body: dict[str, object]):
+    def with_null(path: str, body: dict[str, object]):
         if path == "/completion":
-            return 200, _completion_body(0, top_ids=(LETTER_IDS[0], LETTER_IDS[1], LETTER_IDS[2], 99))
+            return 200, _completion_body(0, logprobs=[-1.25, None, -2.5, -3.5])
         return _default_responder(path, body)
 
-    running = _FakeServer(outsider)
+    running = _FakeServer(with_null)
     try:
-        with pytest.raises(evaluator.EvaluationError, match="top-4"):
-            _run(running.url, tmp_path / "top4.json", mmlu, arc)
+        result = _run(running.url, tmp_path / "null-logprob.json", mmlu, arc)
     finally:
         running.close()
+
+    assert result["records"][0]["pre_sampling_top_logprobs"] == [-1.25, None, -2.5, -3.5]
+
+
+def test_candidate_set_top_four_is_still_accepted(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    mmlu, arc = _mmlu_items(3), _arc_items(2)
+    _configure(monkeypatch, mmlu, arc)
+
+    def biased(path: str, body: dict[str, object]):
+        if path == "/completion":
+            return 200, _completion_body(0, top_ids=LETTER_IDS)
+        return _default_responder(path, body)
+
+    running = _FakeServer(biased)
+    try:
+        result = _run(running.url, tmp_path / "biased-top4.json", mmlu, arc)
+    finally:
+        running.close()
+
+    assert result["records"][0]["pre_sampling_top_ids"] == list(LETTER_IDS)
 
 
 def test_rejects_a_response_without_the_pinned_top_logprobs_field(

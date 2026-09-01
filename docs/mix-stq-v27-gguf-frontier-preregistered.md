@@ -199,3 +199,18 @@ resume 결과를 최종 full로 승격하지 않는다.
   smoke와 소규모 pilot으로 실측 속도·비용을 얻고 사용자 비용 승인을 받은 뒤 full을 시작한다.
 
 실제 측정이 이 범위를 벗어나도 표본·arm·판정 규칙을 바꾸지 않는다.
+
+---
+
+## 개정 1 (2026-09-02): top-4 확률의 의미 정정
+
+4.1의 top-4 검사를 개정한다. 고정 commit `580e88d8b7dece7099d9b62323521d0254ff3615`에서
+`post_sampling_probs`를 보내지 않는 요청의 `top_logprobs`는 sampling 이전 raw logit에서
+계산되어 `logit_bias`를 반영하지 않는다는 것을 소스와 실측으로 확인했다. 따라서 생성
+token이 후보 집합 안인지 검사하는 규칙은 유지하고, top-4 token id 집합이 후보 집합과
+같은지 검사하는 규칙은 제거해 그 목록을 pre-sampling 진단값으로 기록한다. 요청 payload,
+표본 800문항, fingerprint, arm 집합, 판정 규칙은 바꾸지 않는다.
+
+이 개정은 유료 실행 전, v0.27 GGUF 결과를 하나도 관찰하지 않은 시점에 이루어졌다. 근거,
+소스 인용, probe 응답과 대안 기각 사유는
+[`mix-stq-v27-amendment-1-top4-semantics.md`](mix-stq-v27-amendment-1-top4-semantics.md)에 있다.

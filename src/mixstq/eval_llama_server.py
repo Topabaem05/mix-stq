@@ -250,7 +250,28 @@ def request_contract() -> dict[str, object]:
     return contract
 
 
-def _top_token_ids(entry: object) -> list[int]:
+def _diagnostic_logprob(value: object) -> float | None:
+    """Normalize one diagnostic logprob; the pinned server serializes -inf as null."""
+
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise EvaluationError(
+            f"llama-server {TOP_PROBS_KEY} entries must carry a numeric or null logprob"
+        )
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def _pre_sampling_top(entry: object) -> tuple[list[int], list[float | None]]:
+    """Return the pre-sampling top-N candidate ids and logprobs of one probability entry.
+
+    Amendment 1 (2026-09-02): at the pinned llama.cpp commit this list is built from raw
+    pre-sampling logits (server-context.cpp:1985 -> server-common.cpp:1501-1504), so it
+    never reflects logit_bias and is recorded as a diagnostic instead of a protocol gate.
+    See docs/mix-stq-v27-amendment-1-top4-semantics.md.
+    """
+
     if not isinstance(entry, Mapping):
         raise EvaluationError("llama-server completion probabilities are malformed")
     candidates = entry.get(TOP_PROBS_KEY)
@@ -258,15 +279,19 @@ def _top_token_ids(entry: object) -> list[int]:
         raise EvaluationError(
             f"llama-server completion probabilities lack the pinned {TOP_PROBS_KEY} list"
         )
-    ids = []
+    ids: list[int] = []
+    logprobs: list[float | None] = []
     for candidate in candidates:
-        if not isinstance(candidate, Mapping) or isinstance(candidate.get("id"), bool):
-            raise EvaluationError("llama-server did not return top-4 candidate token ids")
+        if not isinstance(candidate, Mapping):
+            raise EvaluationError(f"llama-server {TOP_PROBS_KEY} entries must be objects")
         token = candidate.get("id")
-        if not isinstance(token, int):
-            raise EvaluationError("llama-server did not return top-4 candidate token ids")
+        if isinstance(token, bool) or not isinstance(token, int):
+            raise EvaluationError(
+                f"llama-server {TOP_PROBS_KEY} entries must carry integer token ids"
+            )
         ids.append(int(token))
-    return ids
+        logprobs.append(_diagnostic_logprob(candidate.get("logprob")))
+    return ids, logprobs
 
 
 def score_completion(response: Mapping[str, object], letter_ids: Sequence[int]) -> dict[str, object]:
@@ -284,13 +309,18 @@ def score_completion(response: Mapping[str, object], letter_ids: Sequence[int]) 
     probabilities = response.get("completion_probabilities")
     if not isinstance(probabilities, list) or len(probabilities) != 1:
         raise EvaluationError("llama-server did not return exactly one completion probability set")
-    top_ids = _top_token_ids(probabilities[0])
-    if sorted(top_ids) != sorted(letter_ids):
-        raise EvaluationError("llama-server top-4 token ids are not the candidate set")
+    # Amendment 1: the pinned server reports pre-sampling, unbiased candidates here, so
+    # the list is required and recorded but is never compared with the candidate set.
+    top_ids, top_logprobs = _pre_sampling_top(probabilities[0])
     content = response.get("content")
     if isinstance(content, str) and content.strip() != LETTERS[prediction]:
         raise EvaluationError("llama-server completion text does not match its candidate token")
-    return {"prediction": prediction, "tokens": tokens, "top_token_ids": top_ids}
+    return {
+        "prediction": prediction,
+        "tokens": tokens,
+        "pre_sampling_top_ids": top_ids,
+        "pre_sampling_top_logprobs": top_logprobs,
+    }
 
 
 def load_items(mmlu_loader=None, arc_loader=None) -> list[dict[str, object]]:
@@ -364,6 +394,10 @@ def validate_record(
         raise EvaluationError(f"item record {index} is not an object")
     prediction = record.get("prediction")
     seconds = record.get("request_seconds")
+    # Amendment 1: the pre-sampling diagnostic must be present and well formed, but its
+    # ids are unbiased natural candidates and are never required to be the letter set.
+    top_ids = _token_ids(record.get("pre_sampling_top_ids"), "record pre-sampling top ids")
+    top_logprobs = record.get("pre_sampling_top_logprobs")
     if (
         record.get("index") != index
         or record.get("task") != item["task"]
@@ -374,8 +408,17 @@ def validate_record(
         or prediction not in range(len(LETTERS))
         or record.get("correct") != int(prediction == item["answer"])
         or record.get("tokens") != [int(letter_ids[prediction])]
-        or sorted(_token_ids(record.get("top_token_ids"), "record top token ids"))
-        != sorted(int(token_id) for token_id in letter_ids)
+        or not isinstance(top_logprobs, list)
+        or len(top_logprobs) != len(top_ids)
+        or any(
+            value is not None
+            and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+            )
+            for value in top_logprobs
+        )
         or isinstance(seconds, bool)
         or not isinstance(seconds, (int, float))
         or not math.isfinite(float(seconds))
@@ -597,7 +640,9 @@ def _execute(
                     "prediction": prediction,
                     "correct": int(prediction == item["answer"]),
                     "tokens": scored["tokens"],
-                    "top_token_ids": scored["top_token_ids"],
+                    # Amendment 1: pre-sampling and unbiased; a diagnostic, not a gate.
+                    "pre_sampling_top_ids": scored["pre_sampling_top_ids"],
+                    "pre_sampling_top_logprobs": scored["pre_sampling_top_logprobs"],
                     "request_seconds": elapsed,
                 },
                 item,

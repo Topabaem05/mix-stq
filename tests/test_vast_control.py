@@ -630,6 +630,84 @@ def test_search_cli_passes_optional_resource_constraints(monkeypatch):
     }
 
 
+def test_stale_offer_id_never_falls_back_to_another_machine(monkeypatch, tmp_path):
+    """Vast rotates offer ids per call, so an absent --offer must stop the rental, not slide."""
+
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "_search_offers",
+        lambda *_args, **_kwargs: [
+            # Cheapest first, and it is the GPU-broken machine run 1 had to abandon twice.
+            _offer(offer_id=44937483, machine_id=142444, dph_total=0.5929),
+            _offer(offer_id=35122407, machine_id=71654, dph_total=0.96),
+        ],
+    )
+    monkeypatch.setattr(
+        vast_control,
+        "create",
+        lambda *_args, **_kwargs: pytest.fail("a stale offer id must not rent anything"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vast-control",
+            "create",
+            "--offer",
+            "35122399",
+            "--max-hourly",
+            "1.20",
+            "--confirm",
+        ],
+    )
+
+    with pytest.raises(vast_control.VastError, match="--machine") as caught:
+        vast_control.main()
+
+    assert "35122399" in str(caught.value)
+    assert not state_path.exists()
+
+
+def test_a_pinned_machine_survives_offer_id_rotation(monkeypatch, tmp_path):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "_search_offers",
+        lambda *_args, **_kwargs: [
+            _offer(offer_id=44937483, machine_id=142444, dph_total=0.5929),
+            _offer(offer_id=35122407, machine_id=71654, dph_total=0.96),
+        ],
+    )
+    created = {}
+
+    def fake_create(offer_id, *_args, **_kwargs):
+        created["offer_id"] = offer_id
+        return {"success": True, "new_contract": 77}
+
+    monkeypatch.setattr(vast_control, "create", fake_create)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vast-control",
+            "create",
+            "--offer",
+            "35122399",
+            "--machine",
+            "71654",
+            "--max-hourly",
+            "1.20",
+            "--confirm",
+        ],
+    )
+
+    assert vast_control.main() == 0
+    assert created["offer_id"] == 35122407
+
+
 def test_confirmed_create_refuses_an_operator_unseen_machine(monkeypatch, tmp_path):
     state_path = tmp_path / "mixstq" / "vast_state.json"
     monkeypatch.setattr(vast_control, "STATE", state_path)
@@ -737,7 +815,8 @@ def test_confirmed_create_rents_the_fresh_offer_id_for_the_same_machine(
     monkeypatch.setattr(vast_control, "STATE", state_path)
     created = {}
     # Vast hands out a different chunk id for the same machine on every /bundles call, so the
-    # stale id from the operator's earlier search is never in the fresh rentable set.
+    # stale id from the operator's earlier search is never in the fresh rentable set; the machine
+    # pin is what carries the operator's choice across the rotation.
     monkeypatch.setattr(
         vast_control,
         "_search_offers",
@@ -757,6 +836,8 @@ def test_confirmed_create_rents_the_fresh_offer_id_for_the_same_machine(
             "create",
             "--offer",
             "44937497",
+            "--machine",
+            "142444",
             "--max-hourly",
             "0.75",
             "--min-vram",

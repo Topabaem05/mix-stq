@@ -385,11 +385,14 @@ test -z "$(git status --porcelain)"
 PYTHONPATH=src python3 -m mixstq.vast_control search --gpu '' --max-price 1.20 --min-vram 80 --disk 300 --limit 20 --min-system-ram-gb 96 --min-cpu-cores 16 --min-download-mbps 500 --min-reliability 0.98
 ```
 
-Pass the same constraints to `create --confirm`. Vast hands out a different chunk id for the same
-machine on every `/bundles` call, so the id from this search is only a preference: `create --confirm`
-re-searches, re-checks every numeric constraint against the fresh offer, and rents the id that same
-response returned. Add `--exclude-machine <ID>` for any machine already observed to fail (machine
-`142444` could not attach a GPU to a container, twice), and `--machine <ID>` to pin a known-good one.
+Pass the same constraints to `create --confirm`, and read the `machine_id` of the offer you chose.
+Vast hands out a different chunk id for the same machine on every `/bundles` call, so **`--machine
+<ID>` is the only pin that survives id rotation** — pin the machine, not the offer. `create
+--confirm` re-searches, re-checks every numeric constraint against the fresh offer, and rents the
+id that same response returned for the pinned machine. `--offer <ID>` is honoured only while that
+exact id is still listed; once it rotates away, `--confirm` stops with an error telling you to pass
+`--machine`, and never falls back to another host. Add `--exclude-machine <ID>` for any machine
+already observed to fail (machine `142444` could not attach a GPU to a container, twice).
 `--confirm` refuses to rent a machine the operator has not pinned with `--machine` or `--offer`
 unless `--any-machine` is passed. The price cap is applied to an all-in estimate, compute plus
 `storage_cost x requested GB / 730`, wherever the offer exposes `storage_cost`; where it does not,

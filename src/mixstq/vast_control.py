@@ -651,6 +651,14 @@ def main() -> int:
                 "%d GB disk; re-run search" % (args.max_hourly, args.min_vram, args.disk)
             )
         preferred = [offer for offer in candidates if offer.get("id") == args.offer]
+        if args.offer is not None and not preferred and args.machine is None and not args.any_machine:
+            # Ids rotate per /bundles call, so an absent id says nothing about the machine. Falling
+            # back to the cheapest offer would rent a machine the operator never looked at.
+            raise VastError(
+                "offer %d is no longer in the rentable set; Vast rotates offer ids per call, so "
+                "the id cannot pin a host. Pass --machine <id> to pin the machine that offer was "
+                "on, or --any-machine to accept the cheapest revalidated offer" % args.offer
+            )
         offer = (preferred or candidates)[0]
         violation = _offer_violation(
             offer,

@@ -253,8 +253,8 @@ def test_confirmed_create_never_persists_or_prints_raw_response(
     monkeypatch.setattr(vast_control, "STATE", state_path)
     monkeypatch.setattr(
         vast_control,
-        "search",
-        lambda *_args, **_kwargs: [{"id": 123, "dph": 0.5}],
+        "_search_offers",
+        lambda *_args, **_kwargs: [_offer(offer_id=123, machine_id=71654)],
     )
     monkeypatch.setattr(
         vast_control,
@@ -519,6 +519,7 @@ def test_search_adds_exact_raw_constraints_and_returns_resource_fields(monkeypat
             "down_mbps": 500.0,
             "reliability": 0.98,
             "geo": "KR",
+            "machine_id": None,
         }
     ]
 
@@ -609,6 +610,8 @@ def test_search_cli_passes_optional_resource_constraints(monkeypatch):
             "500",
             "--min-reliability",
             "0.98",
+            "--exclude-machine",
+            "142444",
         ],
     )
 
@@ -620,8 +623,178 @@ def test_search_cli_passes_optional_resource_constraints(monkeypatch):
             "min_cpu_cores": 16.0,
             "min_download_mbps": 500.0,
             "min_reliability": 0.98,
+            "exclude_machines": (142444,),
         },
     }
+
+
+def test_search_reports_machine_id_and_honours_exclusions(monkeypatch):
+    monkeypatch.setattr(
+        vast_control,
+        "_request",
+        lambda *_args, **_kwargs: {
+            "offers": [
+                _offer(offer_id=1, machine_id=142444, dph_total=0.4),
+                _offer(offer_id=2, machine_id=71654),
+            ]
+        },
+    )
+
+    rows = vast_control.search("RTX_4090", 0.6, 24, 80, 10)
+    assert [(row["id"], row["machine_id"]) for row in rows] == [(1, 142444), (2, 71654)]
+
+    kept = vast_control.search("RTX_4090", 0.6, 24, 80, 10, exclude_machines=(142444,))
+    assert [row["id"] for row in kept] == [2]
+
+
+def test_confirmed_create_rents_the_fresh_offer_id_for_the_same_machine(
+    monkeypatch, tmp_path, capsys
+):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    created = {}
+    # Vast hands out a different chunk id for the same machine on every /bundles call, so the
+    # stale id from the operator's earlier search is never in the fresh rentable set.
+    monkeypatch.setattr(
+        vast_control,
+        "_search_offers",
+        lambda *_args, **_kwargs: [_offer(offer_id=44937483, machine_id=142444)],
+    )
+
+    def fake_create(offer_id, image, disk, onstart):
+        created.update(offer_id=offer_id, image=image, disk=disk, onstart=onstart)
+        return {"success": True, "new_contract": 99}
+
+    monkeypatch.setattr(vast_control, "create", fake_create)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vast-control",
+            "create",
+            "--offer",
+            "44937497",
+            "--max-hourly",
+            "0.75",
+            "--min-vram",
+            "24",
+            "--disk",
+            "80",
+            "--min-reliability",
+            "0.98",
+            "--confirm",
+        ],
+    )
+
+    assert vast_control.main() == 0
+
+    assert created["offer_id"] == 44937483
+    output = capsys.readouterr().out
+    assert "44937483" in output
+    assert "142444" in output
+    event = json.loads(state_path.read_text(encoding="utf-8"))[0]
+    assert event["offer"] == 44937483
+    assert event["instance_id"] == 99
+
+
+def test_confirmed_create_excludes_machines_and_fails_closed_when_none_remain(
+    monkeypatch, tmp_path
+):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    captured = {}
+
+    def fake_search_offers(*args, **kwargs):
+        captured.update(args=args, kwargs=kwargs)
+        return []
+
+    monkeypatch.setattr(vast_control, "_search_offers", fake_search_offers)
+    monkeypatch.setattr(
+        vast_control,
+        "create",
+        lambda *_args, **_kwargs: pytest.fail("create must not run without a fresh offer"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vast-control",
+            "create",
+            "--max-hourly",
+            "0.75",
+            "--exclude-machine",
+            "142444",
+            "--exclude-machine",
+            "71654",
+            "--confirm",
+        ],
+    )
+
+    with pytest.raises(vast_control.VastError, match="no rentable offer"):
+        vast_control.main()
+
+    assert captured["kwargs"]["exclude_machines"] == (142444, 71654)
+    assert not state_path.exists()
+
+
+def test_confirmed_create_revalidates_the_fresh_offer_and_refuses_a_violation(
+    monkeypatch, tmp_path
+):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "_search_offers",
+        lambda *_args, **_kwargs: [_offer(offer_id=7, machine_id=1, dph_total=0.9)],
+    )
+    monkeypatch.setattr(
+        vast_control,
+        "create",
+        lambda *_args, **_kwargs: pytest.fail("create must not run after failed revalidation"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["vast-control", "create", "--max-hourly", "0.75", "--confirm"],
+    )
+
+    with pytest.raises(vast_control.VastError, match="revalidation"):
+        vast_control.main()
+
+    assert not state_path.exists()
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "constraints"),
+    [
+        ("dph_total", 0.9, {}),
+        ("gpu_ram", 23_000, {}),
+        ("disk_space", 40, {}),
+        ("num_gpus", 2, {}),
+        ("cpu_ram", 32_000, {"min_system_ram_gb": 64}),
+        ("cpu_cores", 8, {"min_cpu_cores": 16}),
+        ("inet_down", 100.0, {"min_download_mbps": 500}),
+        ("reliability2", 0.90, {"min_reliability": 0.98}),
+        ("machine_id", 142444, {"exclude_machines": (142444,)}),
+    ],
+)
+def test_offer_violation_names_every_constraint_it_rejects(field, value, constraints):
+    offer = _offer(**{"machine_id": 71654, field: value})
+    arguments = {
+        "gpu": "",
+        "max_price": 0.75,
+        "min_vram": 24,
+        "disk": 80,
+        "min_system_ram_gb": 0.0,
+        "min_cpu_cores": 0.0,
+        "min_download_mbps": 0.0,
+        "min_reliability": 0.0,
+        "exclude_machines": (),
+        **constraints,
+    }
+
+    assert vast_control._offer_violation(offer, **arguments) is not None
+    assert vast_control._offer_violation(_offer(machine_id=71654), **arguments) is None
 
 
 def test_create_confirmation_revalidates_all_requested_constraints(monkeypatch):
@@ -631,7 +804,7 @@ def test_create_confirmation_revalidates_all_requested_constraints(monkeypatch):
         captured.update(args=args, kwargs=kwargs)
         return []
 
-    monkeypatch.setattr(vast_control, "search", fake_search)
+    monkeypatch.setattr(vast_control, "_search_offers", fake_search)
     monkeypatch.setattr(
         vast_control,
         "create",
@@ -663,7 +836,7 @@ def test_create_confirmation_revalidates_all_requested_constraints(monkeypatch):
         ],
     )
 
-    with pytest.raises(vast_control.VastError, match="offer 123 not in the rentable set"):
+    with pytest.raises(vast_control.VastError, match="no rentable offer"):
         vast_control.main()
 
     assert captured == {
@@ -673,6 +846,7 @@ def test_create_confirmation_revalidates_all_requested_constraints(monkeypatch):
             "min_cpu_cores": 16.0,
             "min_download_mbps": 500.0,
             "min_reliability": 0.98,
+            "exclude_machines": (),
         },
     }
 
@@ -684,7 +858,7 @@ def test_create_dry_run_keeps_hourly_cap_and_has_no_side_effect(
     monkeypatch.setattr(vast_control, "STATE", state_path)
     monkeypatch.setattr(
         vast_control,
-        "search",
+        "_search_offers",
         lambda *_args, **_kwargs: pytest.fail("dry-run must not search or revalidate"),
     )
     monkeypatch.setattr(

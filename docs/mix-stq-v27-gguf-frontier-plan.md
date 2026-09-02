@@ -385,7 +385,11 @@ test -z "$(git status --porcelain)"
 PYTHONPATH=src python3 -m mixstq.vast_control search --gpu '' --max-price 1.20 --min-vram 80 --disk 300 --limit 20 --min-system-ram-gb 96 --min-cpu-cores 16 --min-download-mbps 500 --min-reliability 0.98
 ```
 
-Choose a verified offer only from that result and pass the same constraints to `create --confirm`.
+Pass the same constraints to `create --confirm`. Vast hands out a different chunk id for the same
+machine on every `/bundles` call, so the id from this search is only a preference: `create --confirm`
+re-searches, re-checks every numeric constraint against the fresh offer, and rents the id that same
+response returned. Add `--exclude-machine <ID>` for any machine already observed to fail (machine
+`142444` could not attach a GPU to a container, twice), and `--machine <ID>` to pin a known-good one.
 
 - [ ] **Step 3: Execute phases in one tmux session**
 

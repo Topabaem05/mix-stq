@@ -162,7 +162,106 @@ def _offer_reliability(offer: dict) -> int | float | None:
     return _number(offer.get("reliability"))
 
 
-def search(
+def _offer_machine_id(offer: dict) -> int | None:
+    machine_id = offer.get("machine_id")
+    if isinstance(machine_id, bool) or not isinstance(machine_id, int):
+        return None
+    return machine_id
+
+
+def _offer_violation(
+    offer: object,
+    *,
+    gpu: str,
+    max_price: float,
+    min_vram: int,
+    disk: int,
+    min_system_ram_gb: float,
+    min_cpu_cores: float,
+    min_download_mbps: float,
+    min_reliability: float,
+    exclude_machines: tuple[int, ...],
+) -> str | None:
+    """Return the first violated constraint, or None when the offer satisfies all of them."""
+
+    if not isinstance(offer, dict):
+        return "offer is not an object"
+    offer_id = offer.get("id")
+    if isinstance(offer_id, bool) or not isinstance(offer_id, int) or offer_id <= 0:
+        return "offer id is not a positive integer"
+    if offer.get("rentable") is not True:
+        return "offer is not rentable"
+    if _number(offer.get("num_gpus")) != 1:
+        return "offer does not expose exactly one GPU"
+    gpu_ram = _number(offer.get("gpu_ram"))
+    if gpu_ram is None or gpu_ram <= 0 or gpu_ram < min_vram * 1000:
+        return "offer GPU VRAM is below the floor"
+    dph_total = _number(offer.get("dph_total"))
+    if dph_total is None or dph_total <= 0 or dph_total > max_price:
+        return "offer hourly price is outside the accepted range"
+    disk_space = _number(offer.get("disk_space"))
+    if disk_space is None or disk_space <= 0 or disk_space < disk:
+        return "offer disk is below the floor"
+    if gpu and offer.get("gpu_name") != gpu.replace("_", " "):
+        return "offer GPU name does not match"
+    cpu_ram = _number(offer.get("cpu_ram"))
+    if offer.get("cpu_ram") is not None and (cpu_ram is None or cpu_ram < 0):
+        return "offer system RAM is malformed"
+    if min_system_ram_gb > 0 and (cpu_ram is None or cpu_ram < min_system_ram_gb * 1000):
+        return "offer system RAM is below the floor"
+    cpu_cores = _number(offer.get("cpu_cores"))
+    if offer.get("cpu_cores") is not None and (cpu_cores is None or cpu_cores < 0):
+        return "offer CPU count is malformed"
+    if min_cpu_cores > 0 and (cpu_cores is None or cpu_cores < min_cpu_cores):
+        return "offer CPU count is below the floor"
+    inet_down = _number(offer.get("inet_down"))
+    if offer.get("inet_down") is not None and (inet_down is None or inet_down < 0):
+        return "offer download speed is malformed"
+    if min_download_mbps > 0 and (inet_down is None or inet_down < min_download_mbps):
+        return "offer download speed is below the floor"
+    reliability = _offer_reliability(offer)
+    has_reliability = (
+        offer.get("reliability2") is not None or offer.get("reliability") is not None
+    )
+    if has_reliability and (reliability is None or not 0 <= reliability <= 1):
+        return "offer reliability is outside the accepted range"
+    if min_reliability > 0 and (reliability is None or reliability < min_reliability):
+        return "offer reliability is below the floor"
+    if exclude_machines and _offer_machine_id(offer) in exclude_machines:
+        return "offer is on an excluded machine"
+    return None
+
+
+def _validate_exclusions(exclude_machines: object) -> tuple[int, ...]:
+    if exclude_machines is None:
+        return ()
+    if isinstance(exclude_machines, (str, bytes)) or not isinstance(
+        exclude_machines, (list, tuple)
+    ):
+        raise VastError("exclude_machines must be a sequence of machine ids")
+    return tuple(
+        _require_positive_integer("excluded machine id", value) for value in exclude_machines
+    )
+
+
+def _summarize_offer(offer: dict) -> dict:
+    return {
+        "id": offer["id"],
+        "gpu": offer.get("gpu_name"),
+        "num_gpus": offer.get("num_gpus"),
+        "gpu_ram_gb": round((offer.get("gpu_ram") or 0) / 1024, 1),
+        "dph": round(offer.get("dph_total") or 0.0, 4),
+        "disk_gb": offer.get("disk_space"),
+        "system_ram_gb": (_number(offer.get("cpu_ram")) or 0) / 1000,
+        "cpu_cores": _number(offer.get("cpu_cores")) or 0,
+        "down_mbps": round(_number(offer.get("inet_down")) or 0.0, 1),
+        "reliability": round(_offer_reliability(offer) or 0.0, 4),
+        "geo": offer.get("geolocation"),
+        "machine_id": _offer_machine_id(offer),
+    }
+
+
+def _search_offers(
     gpu: str,
     max_price: float,
     min_vram: int,
@@ -172,7 +271,10 @@ def search(
     min_cpu_cores: float = 0.0,
     min_download_mbps: float = 0.0,
     min_reliability: float = 0.0,
+    exclude_machines: tuple[int, ...] | list[int] | None = None,
 ) -> list[dict]:
+    """Return the raw Vast offers that satisfy every constraint, cheapest first."""
+
     _validate_search_inputs(
         max_price,
         min_vram,
@@ -183,6 +285,7 @@ def search(
         min_download_mbps,
         min_reliability,
     )
+    excluded = _validate_exclusions(exclude_machines)
     query = {
         "rentable": {"eq": True},
         "num_gpus": {"eq": 1},
@@ -205,86 +308,53 @@ def search(
     offers = response.get("offers", [])
     if not isinstance(offers, list):
         raise VastError("unexpected /bundles/ payload; key may be invalid")
-    selected = []
-    for offer in offers:
-        if not isinstance(offer, dict):
-            continue
-        offer_id = offer.get("id")
-        if (
-            isinstance(offer_id, bool)
-            or not isinstance(offer_id, int)
-            or offer_id <= 0
-        ):
-            continue
-        if offer.get("rentable") is not True:
-            continue
-        if _number(offer.get("num_gpus")) != 1:
-            continue
-        gpu_ram = _number(offer.get("gpu_ram"))
-        if gpu_ram is None or gpu_ram <= 0 or gpu_ram < min_vram * 1000:
-            continue
-        dph_total = _number(offer.get("dph_total"))
-        if dph_total is None or dph_total <= 0 or dph_total > max_price:
-            continue
-        disk_space = _number(offer.get("disk_space"))
-        if disk_space is None or disk_space <= 0 or disk_space < disk:
-            continue
-        if gpu and offer.get("gpu_name") != gpu.replace("_", " "):
-            continue
-        cpu_ram = _number(offer.get("cpu_ram"))
-        if offer.get("cpu_ram") is not None and (cpu_ram is None or cpu_ram < 0):
-            continue
-        if min_system_ram_gb > 0 and (
-            cpu_ram is None or cpu_ram < min_system_ram_gb * 1000
-        ):
-            continue
-        cpu_cores = _number(offer.get("cpu_cores"))
-        if offer.get("cpu_cores") is not None and (
-            cpu_cores is None or cpu_cores < 0
-        ):
-            continue
-        if min_cpu_cores > 0 and (cpu_cores is None or cpu_cores < min_cpu_cores):
-            continue
-        inet_down = _number(offer.get("inet_down"))
-        if offer.get("inet_down") is not None and (
-            inet_down is None or inet_down < 0
-        ):
-            continue
-        if min_download_mbps > 0 and (
-            inet_down is None or inet_down < min_download_mbps
-        ):
-            continue
-        reliability = _offer_reliability(offer)
-        has_reliability = (
-            offer.get("reliability2") is not None
-            or offer.get("reliability") is not None
+    selected = [
+        offer
+        for offer in offers
+        if _offer_violation(
+            offer,
+            gpu=gpu,
+            max_price=max_price,
+            min_vram=min_vram,
+            disk=disk,
+            min_system_ram_gb=min_system_ram_gb,
+            min_cpu_cores=min_cpu_cores,
+            min_download_mbps=min_download_mbps,
+            min_reliability=min_reliability,
+            exclude_machines=excluded,
         )
-        if has_reliability and (
-            reliability is None or not 0 <= reliability <= 1
-        ):
-            continue
-        if min_reliability > 0 and (
-            reliability is None or reliability < min_reliability
-        ):
-            continue
-        selected.append(offer)
+        is None
+    ]
     selected.sort(key=lambda o: _number(o.get("dph_total")) or 1e9)
-    selected = selected[:limit]
+    return selected[:limit]
+
+
+def search(
+    gpu: str,
+    max_price: float,
+    min_vram: int,
+    disk: int,
+    limit: int,
+    min_system_ram_gb: float = 0.0,
+    min_cpu_cores: float = 0.0,
+    min_download_mbps: float = 0.0,
+    min_reliability: float = 0.0,
+    exclude_machines: tuple[int, ...] | list[int] | None = None,
+) -> list[dict]:
     return [
-        {
-            "id": offer["id"],
-            "gpu": offer.get("gpu_name"),
-            "num_gpus": offer.get("num_gpus"),
-            "gpu_ram_gb": round((offer.get("gpu_ram") or 0) / 1024, 1),
-            "dph": round(offer.get("dph_total") or 0.0, 4),
-            "disk_gb": offer.get("disk_space"),
-            "system_ram_gb": (_number(offer.get("cpu_ram")) or 0) / 1000,
-            "cpu_cores": _number(offer.get("cpu_cores")) or 0,
-            "down_mbps": round(_number(offer.get("inet_down")) or 0.0, 1),
-            "reliability": round(_offer_reliability(offer) or 0.0, 4),
-            "geo": offer.get("geolocation"),
-        }
-        for offer in selected
+        _summarize_offer(offer)
+        for offer in _search_offers(
+            gpu,
+            max_price,
+            min_vram,
+            disk,
+            limit,
+            min_system_ram_gb=min_system_ram_gb,
+            min_cpu_cores=min_cpu_cores,
+            min_download_mbps=min_download_mbps,
+            min_reliability=min_reliability,
+            exclude_machines=exclude_machines,
+        )
     ]
 
 
@@ -439,9 +509,16 @@ def main() -> int:
                       help="minimum Vast inet_down value in Mbps")
     find.add_argument("--min-reliability", type=float, default=0.0,
                       help="minimum Vast offer reliability fraction (for example, 0.98)")
+    find.add_argument("--exclude-machine", type=int, action="append", default=None,
+                      dest="exclude_machine",
+                      help="skip this Vast machine id; repeatable")
 
     up = sub.add_parser("create")
-    up.add_argument("--offer", type=int, required=True)
+    up.add_argument("--offer", type=int, default=None,
+                    help="preferred Vast offer id; Vast rotates ids per call, so it is used only "
+                         "when the fresh rentable set still contains it")
+    up.add_argument("--machine", type=int, default=None,
+                    help="restrict the fresh rentable set to this Vast machine id")
     up.add_argument("--image", default="pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel")
     up.add_argument("--disk", type=int, default=80)
     up.add_argument("--onstart", default=None)
@@ -455,6 +532,9 @@ def main() -> int:
                     help="minimum Vast inet_down value in Mbps")
     up.add_argument("--min-reliability", type=float, default=0.0,
                     help="minimum Vast offer reliability fraction (for example, 0.98)")
+    up.add_argument("--exclude-machine", type=int, action="append", default=None,
+                    dest="exclude_machine",
+                    help="skip this Vast machine id; repeatable")
     up.add_argument("--confirm", action="store_true")
 
     sub.add_parser("list")
@@ -476,6 +556,7 @@ def main() -> int:
             min_cpu_cores=args.min_cpu_cores,
             min_download_mbps=args.min_download_mbps,
             min_reliability=args.min_reliability,
+            exclude_machines=tuple(args.exclude_machine or ()),
         )
         print(json.dumps(offers, indent=1))
         if offers:
@@ -485,7 +566,11 @@ def main() -> int:
         return 0
 
     if args.command == "create":
-        _require_positive_integer("offer", args.offer)
+        if args.offer is not None:
+            _require_positive_integer("offer", args.offer)
+        if args.machine is not None:
+            _require_positive_integer("machine", args.machine)
+        excluded = _validate_exclusions(args.exclude_machine)
         _validate_search_inputs(
             args.max_hourly,
             args.min_vram,
@@ -497,35 +582,55 @@ def main() -> int:
             args.min_reliability,
         )
         if not args.confirm:
-            print("DRY RUN. would create offer %d with hourly cap %.4f" % (args.offer, args.max_hourly))
+            print("DRY RUN. would create at hourly cap %.4f" % args.max_hourly)
             print("re-run with --confirm to spend money")
             return 0
-        offers = {
-            offer["id"]: offer
-            for offer in search(
-                "",
-                args.max_hourly,
-                args.min_vram,
-                args.disk,
-                200,
-                min_system_ram_gb=args.min_system_ram_gb,
-                min_cpu_cores=args.min_cpu_cores,
-                min_download_mbps=args.min_download_mbps,
-                min_reliability=args.min_reliability,
-            )
-        }
-        offer = offers.get(args.offer)
-        if offer is None:
+        # Vast returns a different chunk id for the same machine on every /bundles call, so the id
+        # cannot be revalidated. Revalidate the numeric constraints against a fresh offer instead
+        # and rent the id that same response returned.
+        fresh = _search_offers(
+            "",
+            args.max_hourly,
+            args.min_vram,
+            args.disk,
+            200,
+            min_system_ram_gb=args.min_system_ram_gb,
+            min_cpu_cores=args.min_cpu_cores,
+            min_download_mbps=args.min_download_mbps,
+            min_reliability=args.min_reliability,
+            exclude_machines=excluded,
+        )
+        candidates = [
+            offer
+            for offer in fresh
+            if args.machine is None or _offer_machine_id(offer) == args.machine
+        ]
+        if not candidates:
             raise VastError(
-                "offer %d not in the rentable set at cap %.4f $/hr, %d GB VRAM, %d GB disk; "
-                "re-run search" % (args.offer, args.max_hourly, args.min_vram, args.disk)
+                "no rentable offer matched the pinned constraints at cap %.4f $/hr, %d GB VRAM, "
+                "%d GB disk; re-run search" % (args.max_hourly, args.min_vram, args.disk)
             )
-        if offer["dph"] > args.max_hourly:
-            raise VastError(
-                "offer %.4f $/hr exceeds --max-hourly %.4f" % (offer["dph"], args.max_hourly)
-            )
-        response = create(args.offer, args.image, args.disk, args.onstart)
-        _save({"event": "create", "at": time.time(), "offer": args.offer, "response": response})
+        preferred = [offer for offer in candidates if offer.get("id") == args.offer]
+        offer = (preferred or candidates)[0]
+        violation = _offer_violation(
+            offer,
+            gpu="",
+            max_price=args.max_hourly,
+            min_vram=args.min_vram,
+            disk=args.disk,
+            min_system_ram_gb=args.min_system_ram_gb,
+            min_cpu_cores=args.min_cpu_cores,
+            min_download_mbps=args.min_download_mbps,
+            min_reliability=args.min_reliability,
+            exclude_machines=excluded,
+        )
+        if violation is not None:
+            raise VastError("fresh offer failed revalidation: " + violation)
+        summary = _summarize_offer(offer)
+        offer_id = summary["id"]
+        print(json.dumps({"revalidated_offer": summary}, indent=1))
+        response = create(offer_id, args.image, args.disk, args.onstart)
+        _save({"event": "create", "at": time.time(), "offer": offer_id, "response": response})
         print(json.dumps(_create_summary(response), indent=1))
         return 0
 

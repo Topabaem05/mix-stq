@@ -214,3 +214,25 @@ token이 후보 집합 안인지 검사하는 규칙은 유지하고, top-4 toke
 이 개정은 유료 실행 전, v0.27 GGUF 결과를 하나도 관찰하지 않은 시점에 이루어졌다. 근거,
 소스 인용, probe 응답과 대안 기각 사유는
 [`mix-stq-v27-amendment-1-top4-semantics.md`](mix-stq-v27-amendment-1-top4-semantics.md)에 있다.
+
+---
+
+## 개정 2 (2026-09-02): imatrix chunk 수의 의미와 PPL corpus 직렬화
+
+2단계의 "정확히 128 chunks"를 개정한다. 고정값은 argv `--chunks 128` 그대로이며 이 값은
+상한이다. 실현 chunk 수는 `floor(token_count / 512)`로 결정되고 반드시 기록한다. 1차 유료
+실행에서 고정 corpus(sha256 `79f0c5cf125b9da642e82519e8630885c67c75336dd628eba69a898cdac681d5`,
+46,981 byte)는 10,523 token으로 측정되어 실현 20 chunk였고, argv는 한 글자도 바뀌지 않았다.
+저장소 gate `exact_tokenizer_preflight`는 이미 `0 < token_count <= 128 * 512`를 요구한다.
+
+4.2의 held-out PPL corpus 직렬화를 1차 실행에서 실제로 쓴 규칙으로 고정한다. WikiText-2
+`test` split, revision `b08601e04326c79dfdd32d625aee71d232d685c3`, 4,358 record를 source
+order로 구분자 없이 연결한 뒤 `mixstq.llama_calibration.normalize_text`를 전체에 한 번
+적용한다. 결과 byte 열의 sha256은
+`03492eaf99762251b0c9ed3bc4229294e7f3a03c5ec8cb9cdb61f54999539e11`이다. 소스, split, 순서,
+정규화 여부, 측정 설정은 바뀌지 않는다.
+
+이 개정은 Task 5 파일 생성과 BF16 Top-1 696/800 관찰 이후, 그러나 어떤 양자화 arm의 Top-1,
+어떤 arm의 PPL, 어떤 arm의 llama-bench 값도 관찰하기 전에 이루어졌다. 따라서 어떤 비교
+결과도 이 결정에 영향을 줄 수 없었다. 근거와 증거는
+[`mix-stq-v27-amendment-2-imatrix-chunks-and-ppl-serialization.md`](mix-stq-v27-amendment-2-imatrix-chunks-and-ppl-serialization.md)에 있다.

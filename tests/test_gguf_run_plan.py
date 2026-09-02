@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import math
 import os
@@ -1041,6 +1042,43 @@ def test_exact_tokenizer_preflight_detects_publication_mutation(tmp_path: Path) 
     )
     with pytest.raises(run_plan.PreflightError, match="mutation"):
         run_plan.exact_tokenizer_preflight(fake, _vocab_model(tmp_path), corpus, manifest)
+
+
+def _populate_artifacts(workspace: Path) -> Path:
+    root = workspace / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+    for name in run_plan.MODEL_NAMES:
+        slug = "bf16" if name == "BF16" else name.lower()
+        model = root / "models" / f"qwen38-27b-{slug}.gguf"
+        model.parent.mkdir(parents=True, exist_ok=True)
+        model.write_bytes(f"gguf-{slug}".encode())
+        smoke = root / "smoke" / f"{slug}.txt"
+        smoke.parent.mkdir(parents=True, exist_ok=True)
+        smoke.write_text(f"completion {slug}\n", encoding="utf-8")
+    imatrix = root / "imatrix" / "qwen38-27b.imatrix.gguf"
+    imatrix.parent.mkdir(parents=True, exist_ok=True)
+    imatrix.write_bytes(b"imatrix")
+    projector = root / "projector" / "qwen38-27b-mmproj-bf16.gguf"
+    projector.parent.mkdir(parents=True, exist_ok=True)
+    projector.write_bytes(b"mmproj-projector")
+    return root
+
+
+def test_audit_records_the_projector_and_keeps_it_out_of_the_text_arms(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    root = _populate_artifacts(workspace)
+
+    result = run_plan._audit_artifacts(workspace)
+
+    assert set(result["models"]) == set(run_plan.MODEL_NAMES)
+    projector = result["projector"]
+    assert projector["bytes"] == len(b"mmproj-projector")
+    assert projector["sha256"] == hashlib.sha256(b"mmproj-projector").hexdigest()
+    assert projector["excluded_from_text_bpw"] is True
+    assert "projector" not in result["models"]
+
+    (root / "projector" / "qwen38-27b-mmproj-bf16.gguf").unlink()
+    with pytest.raises(run_plan.PreflightError, match="projector"):
+        run_plan._audit_artifacts(workspace)
 
 
 def _run_cli(repo: Path, *arguments: str) -> subprocess.CompletedProcess[str]:

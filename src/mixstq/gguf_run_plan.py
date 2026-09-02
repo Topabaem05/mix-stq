@@ -949,9 +949,19 @@ def _audit_artifacts(workspace: Path) -> dict[str, object]:
         }
     if not paths["imatrix"].is_file() or paths["imatrix"].stat().st_size <= 0:
         raise PreflightError("audit found a missing or empty imatrix artifact")
+    projector = paths["projector"]
+    if not projector.is_file() or projector.stat().st_size <= 0:
+        raise PreflightError("audit found a missing or empty vision projector artifact")
     return {
         "models": inventory,
         "imatrix_sha256": _sha256_file(paths["imatrix"]),
+        # The preregistration keeps the projector out of both bpw denominators and the
+        # benchmarks, so it is recorded beside the text arms and never inside them.
+        "projector": {
+            "bytes": projector.stat().st_size,
+            "sha256": _sha256_file(projector),
+            "excluded_from_text_bpw": True,
+        },
         "smoke_contract": "five independent nonempty completions",
     }
 

@@ -35,8 +35,17 @@ REQUIRED_EXECUTABLES = (
     "llama-imatrix",
     "llama-quantize",
     "llama-cli",
+    "llama-server",
+    "llama-perplexity",
+    "llama-bench",
     "llama-tokenize",
     "llama-gguf-split",
+)
+MODEL_SNAPSHOT_FILES = (
+    "config.json",
+    "README.md",
+    "tokenizer.json",
+    "tokenizer_config.json",
 )
 RUN_COMMIT_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 TOKEN_COUNT_PATTERN = re.compile(r"Total number of tokens: ([0-9]+)\Z")
@@ -80,6 +89,17 @@ CONVERTER_RUNNER = (
     "sys.path.insert(0,str(root));"
     "sys.argv=[str(matches[0]),*sys.argv[2:]];"
     "runpy.run_path(str(matches[0]),run_name='__main__')"
+)
+# llama-quantize prints its usage and then exits 1 at the pinned llama.cpp commit, so a bare
+# `--help` probe fails bootstrap for a binary that is present and self-documenting. The probe
+# requires usage text and accepts the two documented usage exit codes.
+HELP_PROBE_RUNNER = (
+    "import subprocess,sys;"
+    "completed=subprocess.run([sys.argv[1],'--help'],stdin=subprocess.DEVNULL,"
+    "stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,errors='replace',timeout=120);"
+    "text=completed.stdout;"
+    "'usage' in text.lower() or sys.exit('pinned executable printed no usage text');"
+    "completed.returncode in (0,1) or sys.exit('pinned executable help probe failed')"
 )
 SENSITIVE_TEXT_MARKERS = (
     "hf_",
@@ -232,7 +252,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
     ]
     for executable in REQUIRED_EXECUTABLES:
         bootstrap.append(["test", "-x", bin_dir / executable])
-        bootstrap.append([bin_dir / executable, "--help"])
+        bootstrap.append([python, "-c", HELP_PROBE_RUNNER, bin_dir / executable])
     bootstrap.extend(
         [
             [paths["hf"], "--help"],
@@ -240,13 +260,9 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
                 paths["hf"],
                 "download",
                 MODEL_ID,
+                *MODEL_SNAPSHOT_FILES,
                 "--revision",
                 MODEL_REVISION,
-                "--include",
-                "config.json",
-                "README.md",
-                "tokenizer.json",
-                "tokenizer_config.json",
                 "--local-dir",
                 paths["model_snapshot"],
             ],

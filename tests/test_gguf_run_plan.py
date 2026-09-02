@@ -115,7 +115,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [26, 1, 1, 2, 4, 5, 1, 4]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 1, 2, 4, 5, 1, 4]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -198,6 +198,102 @@ def test_plan_conversion_imatrix_quant_smoke_and_split_contracts(tmp_path: Path)
         for tier in run_plan.TIERS
     ]
     assert all(command[command.index("--split-max-size") + 1] == "8G" for command in plan["split"])
+
+
+def test_bootstrap_downloads_every_pinned_snapshot_file_without_multi_value_include(
+    tmp_path: Path,
+) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    snapshot = str(
+        tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27" / "model-snapshot"
+    )
+    downloads = [
+        command
+        for command in plan["bootstrap"]
+        if command[0].endswith("/hf") and "download" in command
+    ]
+    assert len(downloads) == 2
+
+    partial, full = downloads
+    assert partial[1:3] == ["download", run_plan.MODEL_ID]
+    files = partial[3 : 3 + len(run_plan.MODEL_SNAPSHOT_FILES)]
+    assert files == list(run_plan.MODEL_SNAPSHOT_FILES)
+    assert "config.json" in files
+    assert partial[partial.index("--revision") + 1] == run_plan.MODEL_REVISION
+    assert partial[partial.index("--local-dir") + 1] == snapshot
+    assert "--include" not in partial
+    assert "--include" not in full
+
+    preflight_index = next(
+        index
+        for index, command in enumerate(plan["bootstrap"])
+        if "model-preflight" in command
+    )
+    assert plan["bootstrap"].index(partial) < preflight_index < plan["bootstrap"].index(full)
+
+
+def test_bootstrap_builds_and_probes_every_required_executable(tmp_path: Path) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    build = str(
+        tmp_path
+        / "workspace"
+        / "mix-stq"
+        / "artifacts"
+        / "qwen38-gguf-v27"
+        / "source"
+        / "llama.cpp"
+        / "build"
+    )
+    assert set(run_plan.REQUIRED_EXECUTABLES) >= {
+        "llama-imatrix",
+        "llama-quantize",
+        "llama-cli",
+        "llama-server",
+        "llama-perplexity",
+        "llama-bench",
+        "llama-tokenize",
+        "llama-gguf-split",
+    }
+
+    targets = next(command for command in plan["bootstrap"] if command[:2] == ["cmake", "--build"])
+    assert targets[targets.index("--target") + 1 :] == list(run_plan.REQUIRED_EXECUTABLES)
+
+    for executable in run_plan.REQUIRED_EXECUTABLES:
+        binary = f"{build}/bin/{executable}"
+        assert ["test", "-x", binary] in plan["bootstrap"]
+        probe = [
+            command
+            for command in plan["bootstrap"]
+            if command[-1] == binary and command[0] != "test"
+        ]
+        assert len(probe) == 1
+        assert probe[0][1:3] == ["-c", run_plan.HELP_PROBE_RUNNER]
+        assert [binary, "--help"] not in plan["bootstrap"]
+
+
+def test_help_probe_runner_accepts_a_pinned_usage_exit_code_of_one(tmp_path: Path) -> None:
+    quantize_like = _fake_executable(
+        tmp_path,
+        "import sys\nprint('usage: llama-quantize [options] model-f32.gguf')\nraise SystemExit(1)",
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", run_plan.HELP_PROBE_RUNNER, str(quantize_like)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0
+
+    silent = _fake_executable(tmp_path, "raise SystemExit(1)")
+    rejected = subprocess.run(
+        [sys.executable, "-c", run_plan.HELP_PROBE_RUNNER, str(silent)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert rejected.returncode != 0
 
 
 @pytest.mark.parametrize(

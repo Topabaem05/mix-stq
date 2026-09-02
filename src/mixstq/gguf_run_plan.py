@@ -92,7 +92,16 @@ SMOKE_PREDICT_TOKENS = 16
 SPLIT_MAX_DECIMAL_SIZE = "8G"
 HF_DATASET_REPO = "topabaem/mix-stq-artifacts"
 HF_UPLOAD_PREFIX = "paid-run/qwen38-gguf-frontier-v27"
-EVIDENCE_SOURCES = ("calibration", "imatrix", "smoke", "preflight")
+EVIDENCE_SOURCES = (
+    "calibration",
+    "imatrix",
+    "smoke",
+    "preflight",
+    "audits",
+    # Task 6 writes these on the host; the assembly tolerates their absence.
+    "evals",
+    "bench",
+)
 CONVERTER_RUNNER = (
     "import runpy,sys;"
     "from pathlib import Path;"
@@ -113,6 +122,24 @@ HELP_PROBE_RUNNER = (
     "text=completed.stdout;"
     "'usage' in text.lower() or sys.exit('pinned executable printed no usage text');"
     "completed.returncode in (0,1) or sys.exit('pinned executable help probe failed')"
+)
+# Gather the small artifacts into one evidence directory. Task 6 output directories may not exist
+# yet, so a missing source is skipped rather than failing the phase; an empty gather still fails.
+EVIDENCE_ASSEMBLY_RUNNER = (
+    "import shutil,sys\n"
+    "from pathlib import Path\n"
+    "evidence = Path(sys.argv[1])\n"
+    "evidence.mkdir(parents=True, exist_ok=True)\n"
+    "gathered = 0\n"
+    "for argument in sys.argv[2:]:\n"
+    "    source = Path(argument)\n"
+    "    if not source.is_dir():\n"
+    "        print('skipped absent ' + source.name)\n"
+    "        continue\n"
+    "    shutil.copytree(source, evidence / source.name, dirs_exist_ok=True)\n"
+    "    gathered += 1\n"
+    "    print('gathered ' + source.name)\n"
+    "gathered or sys.exit('no evidence directory was available to gather')\n"
 )
 # Amendment 3 moves the mandatory public verification onto the host. The re-download must be
 # unauthenticated, so it runs in a fresh process with every Hub and token environment variable
@@ -262,6 +289,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
             "-p",
             root / "source",
             root / "preflight",
+            root / "audits",
             root / "calibration",
             root / "evidence",
             root / "models",
@@ -452,7 +480,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
         ]
         for name in MODEL_NAMES
     ]
-    audit = [
+    audit: list[list[object]] = [
         [
             python,
             "-m",
@@ -463,6 +491,18 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
             workspace,
         ]
     ]
+    audit.extend(
+        [
+            python,
+            "-m",
+            "mixstq.gguf_audit",
+            "--model",
+            paths["bf16"] if name == "BF16" else paths[f"model_{name}"],
+            "--out",
+            root / "audits" / f"{name}.json",
+        ]
+        for name in MODEL_NAMES
+    )
     split = [
         [
             bin_dir / "llama-gguf-split",
@@ -475,7 +515,13 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
         for tier in TIERS
     ]
     upload: list[list[object]] = [
-        ["cp", "-R", *(root / name for name in EVIDENCE_SOURCES), paths["evidence"]]
+        [
+            python,
+            "-c",
+            EVIDENCE_ASSEMBLY_RUNNER,
+            paths["evidence"],
+            *(root / name for name in EVIDENCE_SOURCES),
+        ]
     ]
     for name, local in (
         *((tier, paths[f"split_dir_{tier}"]) for tier in TIERS),

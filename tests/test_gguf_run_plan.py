@@ -115,7 +115,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 1, 4, 19]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 19]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -199,6 +199,97 @@ def test_plan_conversion_imatrix_quant_smoke_and_split_contracts(tmp_path: Path)
         for tier in run_plan.TIERS
     ]
     assert all(command[command.index("--split-max-size") + 1] == "8G" for command in plan["split"])
+
+
+def test_audit_phase_writes_one_gguf_audit_json_per_arm(tmp_path: Path) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+    models = {
+        "BF16": str(artifact_root / "models" / "qwen38-27b-bf16.gguf"),
+        **{
+            tier: str(artifact_root / "models" / f"qwen38-27b-{tier.lower()}.gguf")
+            for tier in run_plan.TIERS
+        },
+    }
+
+    inventory, *audits = plan["audit"]
+    assert inventory[inventory.index("--action") + 1] == "audit"
+    assert len(audits) == len(run_plan.MODEL_NAMES)
+
+    for command, name in zip(audits, run_plan.MODEL_NAMES, strict=True):
+        assert command[1:3] == ["-m", "mixstq.gguf_audit"]
+        assert command[command.index("--model") + 1] == models[name]
+        assert command[command.index("--out") + 1] == str(artifact_root / "audits" / f"{name}.json")
+
+    mkdir = next(command for command in plan["bootstrap"] if command[:2] == ["mkdir", "-p"])
+    assert str(artifact_root / "audits") in mkdir
+
+
+def test_evidence_assembly_gathers_task_six_outputs_and_tolerates_absence(
+    tmp_path: Path,
+) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+
+    assert run_plan.EVIDENCE_SOURCES == (
+        "calibration",
+        "imatrix",
+        "smoke",
+        "preflight",
+        "audits",
+        "evals",
+        "bench",
+    )
+    assembly = plan["upload"][0]
+    assert assembly[1:3] == ["-c", run_plan.EVIDENCE_ASSEMBLY_RUNNER]
+    assert assembly[3] == str(artifact_root / "evidence")
+    assert assembly[4:] == [str(artifact_root / name) for name in run_plan.EVIDENCE_SOURCES]
+    assert "cp" not in assembly
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    present = tmp_path / "audits"
+    present.mkdir()
+    (present / "BF16.json").write_text("{}", encoding="utf-8")
+    nested = tmp_path / "evals"
+    (nested / "markers").mkdir(parents=True)
+    (nested / "markers" / "BF16.complete.json").write_text("{}", encoding="utf-8")
+
+    tolerated = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            run_plan.EVIDENCE_ASSEMBLY_RUNNER,
+            str(evidence),
+            str(present),
+            str(nested),
+            str(tmp_path / "bench"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert tolerated.returncode == 0, tolerated.stderr
+    assert (evidence / "audits" / "BF16.json").is_file()
+    assert (evidence / "evals" / "markers" / "BF16.complete.json").is_file()
+    assert not (evidence / "bench").exists()
+
+    empty = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            run_plan.EVIDENCE_ASSEMBLY_RUNNER,
+            str(evidence),
+            str(tmp_path / "absent"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert empty.returncode != 0
+    assert "no evidence" in empty.stderr
 
 
 def test_upload_phase_runs_after_split_and_publishes_the_preregistered_prefix(

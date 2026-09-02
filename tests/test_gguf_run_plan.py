@@ -115,7 +115,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 1, 4]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 1, 4, 19]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -199,6 +199,154 @@ def test_plan_conversion_imatrix_quant_smoke_and_split_contracts(tmp_path: Path)
         for tier in run_plan.TIERS
     ]
     assert all(command[command.index("--split-max-size") + 1] == "8G" for command in plan["split"])
+
+
+def test_upload_phase_runs_after_split_and_publishes_the_preregistered_prefix(
+    tmp_path: Path,
+) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+    hf = str(artifact_root / "venv" / "bin" / "hf")
+
+    assert run_plan.PHASES[-1] == "upload"
+    assert run_plan.PHASES.index("split") == run_plan.PHASES.index("upload") - 1
+    assert run_plan.HF_DATASET_REPO == "topabaem/mix-stq-artifacts"
+    assert run_plan.HF_UPLOAD_PREFIX == "paid-run/qwen38-gguf-frontier-v27"
+
+    upload = plan["upload"]
+    uploads = [command for command in upload if command[:2] == [hf, "upload"]]
+    assert [command[4] for command in uploads] == [
+        *(f"{run_plan.HF_UPLOAD_PREFIX}/{tier}" for tier in run_plan.TIERS),
+        f"{run_plan.HF_UPLOAD_PREFIX}/projector",
+        f"{run_plan.HF_UPLOAD_PREFIX}/evidence",
+    ]
+    for command in uploads:
+        assert command[2] == run_plan.HF_DATASET_REPO
+        assert command[command.index("--repo-type") + 1] == "dataset"
+    for tier in run_plan.TIERS:
+        assert str(artifact_root / "splits" / tier.lower()) in [command[3] for command in uploads]
+
+    # The BF16 monolith is preserved by revision and recorded SHA, never uploaded.
+    assert all(
+        str(artifact_root / "models" / "qwen38-27b-bf16.gguf") not in command for command in upload
+    )
+
+
+def test_upload_phase_verifies_every_object_with_an_unauthenticated_re_download(
+    tmp_path: Path,
+) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+    hf = str(artifact_root / "venv" / "bin" / "hf")
+    verify_root = artifact_root / "public-verify"
+
+    upload = plan["upload"]
+    downloads = [command for command in upload if "download" in command]
+    verifications = [
+        command for command in upload if run_plan.PUBLIC_VERIFY_RUNNER in command
+    ]
+    assert len(downloads) == len(verifications) == len(run_plan.TIERS) + 2
+
+    for command in downloads:
+        assert command[1] == "-c"
+        assert command[2] == run_plan.UNAUTHENTICATED_RUNNER
+        assert command[3] == hf
+        assert command[4] == "download"
+        assert command[5] == run_plan.HF_DATASET_REPO
+        assert command[command.index("--repo-type") + 1] == "dataset"
+        assert command[command.index("--local-dir") + 1] == str(verify_root)
+        include = command[command.index("--include") + 1 :]
+        assert len(include) == 1
+        assert include[0].startswith(run_plan.HF_UPLOAD_PREFIX + "/")
+
+    for command in verifications:
+        assert command[-1].startswith(str(verify_root / run_plan.HF_UPLOAD_PREFIX))
+        assert command[-2].startswith(str(artifact_root))
+
+    for tier in run_plan.TIERS:
+        upload_index = next(
+            index for index, command in enumerate(upload) if command[4:5] == [
+                f"{run_plan.HF_UPLOAD_PREFIX}/{tier}"
+            ]
+        )
+        download_index = next(
+            index
+            for index, command in enumerate(upload)
+            if "download" in command and command[-1] == f"{run_plan.HF_UPLOAD_PREFIX}/{tier}/*"
+        )
+        verify_index = next(
+            index
+            for index, command in enumerate(upload)
+            if run_plan.PUBLIC_VERIFY_RUNNER in command
+            and command[-1] == str(verify_root / run_plan.HF_UPLOAD_PREFIX / tier)
+        )
+        assert upload_index < download_index < verify_index
+
+
+def test_upload_phase_argv_carries_no_credential_and_strips_the_hub_environment() -> None:
+    plan = run_plan.build_plan(Path("/workspace"), RUN_COMMIT)
+    serialized = json.dumps(plan)
+    _assert_safe(serialized)
+
+    for command in plan["upload"]:
+        assert "--token" not in command
+        assert not any("=" in argument and argument.split("=")[0].isupper() for argument in command)
+        assert "env" not in command
+        assert all(
+            "TOKEN" not in argument.upper()
+            for argument in command
+            if argument != run_plan.UNAUTHENTICATED_RUNNER
+        )
+
+    stripped = run_plan.UNAUTHENTICATED_RUNNER
+    assert "os.execv" in stripped
+    assert "TOKEN" in stripped and "HUGGINGFACE" in stripped
+
+
+def test_public_verify_runner_matches_hashes_and_releases_the_downloaded_copy(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    (source / "nested").mkdir(parents=True)
+    (source / "shard-00001-of-00002.gguf").write_bytes(b"first shard payload")
+    (source / "nested" / "shard-00002-of-00002.gguf").write_bytes(b"second shard payload")
+    mirror = tmp_path / "mirror"
+    (mirror / "nested").mkdir(parents=True)
+    (mirror / "shard-00001-of-00002.gguf").write_bytes(b"first shard payload")
+    (mirror / "nested" / "shard-00002-of-00002.gguf").write_bytes(b"second shard payload")
+
+    def verify() -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-c", run_plan.PUBLIC_VERIFY_RUNNER, str(source), str(mirror)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+    accepted = verify()
+    assert accepted.returncode == 0, accepted.stderr
+    assert not mirror.exists()
+    assert (source / "shard-00001-of-00002.gguf").is_file()
+
+    (mirror / "nested").mkdir(parents=True)
+    (mirror / "shard-00001-of-00002.gguf").write_bytes(b"first shard payload")
+    (mirror / "nested" / "shard-00002-of-00002.gguf").write_bytes(b"tampered payload")
+    corrupted = verify()
+    assert corrupted.returncode != 0
+    assert "mismatch" in corrupted.stderr
+
+    missing_mirror = tmp_path / "absent"
+    missing_mirror.mkdir()
+    incomplete = subprocess.run(
+        [sys.executable, "-c", run_plan.PUBLIC_VERIFY_RUNNER, str(source), str(missing_mirror)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert incomplete.returncode != 0
+    assert "missing" in incomplete.stderr
 
 
 def test_convert_emits_the_pinned_vision_projector_after_the_text_model(tmp_path: Path) -> None:

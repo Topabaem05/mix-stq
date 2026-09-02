@@ -28,7 +28,17 @@ LLAMA_CPP_COMMIT = "580e88d8b7dece7099d9b62323521d0254ff3615"
 REPOSITORY_REMOTE = "https://github.com/Topabaem05/mix-stq.git"
 LLAMA_CPP_REMOTE = "https://github.com/ggml-org/llama.cpp.git"
 ARTIFACT_RELATIVE = ("mix-stq", "artifacts", "qwen38-gguf-v27")
-PHASES = ("bootstrap", "calibration", "convert", "imatrix", "quantize", "smoke", "audit", "split")
+PHASES = (
+    "bootstrap",
+    "calibration",
+    "convert",
+    "imatrix",
+    "quantize",
+    "smoke",
+    "audit",
+    "split",
+    "upload",
+)
 TIERS = ("IQ3_XXS", "IQ4_XS", "Q4_K_M", "Q5_K_M")
 MODEL_NAMES = ("BF16", *TIERS)
 REQUIRED_EXECUTABLES = (
@@ -80,6 +90,9 @@ IMATRIX_TOKEN_CAPACITY = IMATRIX_CHUNKS * IMATRIX_CONTEXT_TOKENS
 SMOKE_SEED = 22
 SMOKE_PREDICT_TOKENS = 16
 SPLIT_MAX_DECIMAL_SIZE = "8G"
+HF_DATASET_REPO = "topabaem/mix-stq-artifacts"
+HF_UPLOAD_PREFIX = "paid-run/qwen38-gguf-frontier-v27"
+EVIDENCE_SOURCES = ("calibration", "imatrix", "smoke", "preflight")
 CONVERTER_RUNNER = (
     "import runpy,sys;"
     "from pathlib import Path;"
@@ -100,6 +113,42 @@ HELP_PROBE_RUNNER = (
     "text=completed.stdout;"
     "'usage' in text.lower() or sys.exit('pinned executable printed no usage text');"
     "completed.returncode in (0,1) or sys.exit('pinned executable help probe failed')"
+)
+# Amendment 3 moves the mandatory public verification onto the host. The re-download must be
+# unauthenticated, so it runs in a fresh process with every Hub and token environment variable
+# removed; no credential is ever named or carried in the planner output.
+UNAUTHENTICATED_RUNNER = (
+    "import os,sys\n"
+    "for name in list(os.environ):\n"
+    "    upper = name.upper()\n"
+    "    if 'TOKEN' in upper or upper.startswith('HF_') or upper.startswith('HUGGINGFACE'):\n"
+    "        os.environ.pop(name, None)\n"
+    "len(sys.argv) > 1 or sys.exit('no command to run unauthenticated')\n"
+    "os.execv(sys.argv[1], sys.argv[1:])\n"
+)
+# Compare every uploaded object against its public copy and release the verified copy at once, so
+# the extra disk the verification needs never exceeds one shard.
+PUBLIC_VERIFY_RUNNER = (
+    "import hashlib,shutil,sys\n"
+    "from pathlib import Path\n"
+    "def digest(path):\n"
+    "    value = hashlib.sha256()\n"
+    "    with path.open('rb') as stream:\n"
+    "        for chunk in iter(lambda: stream.read(1048576), b''):\n"
+    "            value.update(chunk)\n"
+    "    return value.hexdigest()\n"
+    "source = Path(sys.argv[1])\n"
+    "mirror = Path(sys.argv[2])\n"
+    "files = sorted(path for path in source.rglob('*') if path.is_file())\n"
+    "files or sys.exit('nothing to verify under ' + str(source))\n"
+    "for path in files:\n"
+    "    public = mirror / path.relative_to(source)\n"
+    "    public.is_file() or sys.exit('public re-download is missing ' + str(public))\n"
+    "    digest(path) == digest(public) or sys.exit('public sha256 mismatch for ' + str(public))\n"
+    "    print('verified ' + str(path.relative_to(source)))\n"
+    "    public.unlink()\n"
+    "shutil.rmtree(mirror)\n"
+    "print('verified ' + str(len(files)) + ' files against the public copy')\n"
 )
 SENSITIVE_TEXT_MARKERS = (
     "hf_",
@@ -170,11 +219,15 @@ def _paths(workspace: Path) -> dict[str, Path]:
         "bf16": root / "models" / "qwen38-27b-bf16.gguf",
         "imatrix": root / "imatrix" / "qwen38-27b.imatrix.gguf",
         "projector": root / "projector" / "qwen38-27b-mmproj-bf16.gguf",
+        "projector_dir": root / "projector",
+        "evidence": root / "evidence",
+        "public_verify": root / "public-verify",
     }
     for tier in TIERS:
         slug = tier.lower()
         paths[f"model_{tier}"] = root / "models" / f"qwen38-27b-{slug}.gguf"
         paths[f"smoke_{tier}"] = root / "smoke" / f"{slug}.txt"
+        paths[f"split_dir_{tier}"] = root / "splits" / slug
         paths[f"split_{tier}"] = root / "splits" / slug / f"qwen38-27b-{slug}"
     paths["smoke_BF16"] = root / "smoke" / "bf16.txt"
     for name, path in paths.items():
@@ -188,7 +241,7 @@ def _command_strings(command: Sequence[object]) -> list[str]:
 
 
 def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
-    """Return the immutable eight-phase run plan as argv arrays without executing it."""
+    """Return the immutable nine-phase run plan as argv arrays without executing it."""
 
     workspace = _validate_workspace(workspace)
     run_commit = _validate_run_commit(run_commit)
@@ -210,6 +263,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
             root / "source",
             root / "preflight",
             root / "calibration",
+            root / "evidence",
             root / "models",
             root / "projector",
             root / "imatrix",
@@ -420,6 +474,51 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
         ]
         for tier in TIERS
     ]
+    upload: list[list[object]] = [
+        ["cp", "-R", *(root / name for name in EVIDENCE_SOURCES), paths["evidence"]]
+    ]
+    for name, local in (
+        *((tier, paths[f"split_dir_{tier}"]) for tier in TIERS),
+        ("projector", paths["projector_dir"]),
+        ("evidence", paths["evidence"]),
+    ):
+        remote = f"{HF_UPLOAD_PREFIX}/{name}"
+        upload.extend(
+            [
+                # The host CLI is already logged in by the user; no token reaches argv or output.
+                [
+                    paths["hf"],
+                    "upload",
+                    HF_DATASET_REPO,
+                    local,
+                    remote,
+                    "--repo-type",
+                    "dataset",
+                ],
+                [
+                    python,
+                    "-c",
+                    UNAUTHENTICATED_RUNNER,
+                    paths["hf"],
+                    "download",
+                    HF_DATASET_REPO,
+                    "--repo-type",
+                    "dataset",
+                    "--local-dir",
+                    paths["public_verify"],
+                    "--include",
+                    f"{remote}/*",
+                ],
+                [
+                    python,
+                    "-c",
+                    PUBLIC_VERIFY_RUNNER,
+                    local,
+                    paths["public_verify"] / HF_UPLOAD_PREFIX / name,
+                ],
+            ]
+        )
+
     plan_objects = {
         "bootstrap": bootstrap,
         "calibration": calibration,
@@ -429,6 +528,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
         "smoke": smoke,
         "audit": audit,
         "split": split,
+        "upload": upload,
     }
     plan = {
         phase: [_command_strings(command) for command in plan_objects[phase]]

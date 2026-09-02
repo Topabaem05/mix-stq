@@ -107,7 +107,7 @@ then push the immutable reviewed HEAD to `origin/main`. Confirm local and remote
 - Produces: `gguf_run_plan.build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]`.
 - Produces: `python -m mixstq.gguf_run_plan --workspace /workspace --run-commit SHA --format shell|json`.
 - Produces phases `bootstrap`, `calibration`, `convert`, `imatrix`, `quantize`, `smoke`,
-  `audit`, and `split`; command arguments contain no credential.
+  `audit`, `split`, and `upload`; command arguments contain no credential.
 - Consumes: calibration CLI and exact constants from the v0.27 spec.
 
 - [ ] **Step 1: Write failing contract tests**
@@ -362,6 +362,12 @@ git commit -m "Add strict llama server accuracy evaluation"
 - Consumes: reviewed/pushed commit from Tasks 1–4 and `gguf_run_plan` JSON.
 - Produces: BF16, IQ3_XXS, IQ4_XS, Q4_K_M, Q5_K_M monolithic GGUF files, one imatrix,
   one projector, calibration corpus/manifest, per-phase logs, completion markers, and audits.
+- The `convert` phase emits two commands: the text BF16 GGUF (`--no-mtp`) and, from the same
+  pinned converter, the vision projector (`--mmproj`), which stays out of every text bpw
+  denominator and out of the benchmarks.
+- `bootstrap` builds and probes eight executables, `llama-server`, `llama-perplexity` and
+  `llama-bench` included, so Task 6 needs no extra build. Each probe requires usage text and
+  accepts the usage exit codes, because `llama-quantize --help` exits 1 at the pinned commit.
 
 - [ ] **Step 1: Run final pre-rental gates**
 
@@ -419,11 +425,17 @@ baseline. Add the preregistered 2%p decision for each quantized arm without chan
 Use the pinned WikiText-2 test corpus, identical context/chunk settings, full GPU offload, and
 `llama-bench` prompt 512/generation 128/repetitions 5 for every arm. Preserve raw repetitions and medians.
 
-- [ ] **Step 4: Split, recover, upload, and public-verify one arm at a time**
+- [ ] **Step 4: Split, upload from the host, and public-verify one arm at a time**
 
-Split quantized files to at most 8 GiB. Transfer one shard to trusted local storage, verify against the
-remote manifest, upload with the local token, public re-download and verify, then release the local shard.
-Keep every remote monolith until all arms have a valid public preservation marker.
+Split quantized files to at most 8 GiB, then run the planner's `upload` phase. Per amendment 3 the
+rented host uploads directly to `topabaem/mix-stq-artifacts` under
+`paid-run/qwen38-gguf-frontier-v27/<ARM>/`, plus `projector/` and `evidence/`, using the CLI the
+user logged in by hand; no token appears in argv, logs or planner output. Each upload is followed
+by an unauthenticated public re-download in a process with the Hub and token environment stripped,
+and a sha256 comparison that releases each verified copy immediately, so the verification never
+needs more than one shard of extra disk. Keep every remote monolith until all four arms have a
+valid public preservation marker. The BF16 monolith is not uploaded; its revision and SHA are the
+preservation record.
 
 - [ ] **Step 5: Destroy Vast only after closure**
 

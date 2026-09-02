@@ -306,6 +306,20 @@ def test_evidence_assembly_pins_the_task_six_directories_and_fails_closed(tmp_pa
     assert "no evidence" in nothing.stderr
 
 
+def test_pyproject_pins_the_hugging_face_cli_surface_the_planner_uses() -> None:
+    """The planner emits `hf`, which only exists in huggingface_hub 1.x."""
+
+    import tomllib
+
+    pyproject = tomllib.loads(
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    gpu = pyproject["project"]["optional-dependencies"]["gpu"]
+    pin = next(entry for entry in gpu if entry.replace("-", "_").startswith("huggingface_hub"))
+    assert ">=1.29" in pin
+    assert "<2" in pin
+
+
 def test_upload_phase_refuses_to_start_before_task_six_is_complete(tmp_path: Path) -> None:
     plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
     artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"

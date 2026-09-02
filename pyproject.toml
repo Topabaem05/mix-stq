@@ -12,7 +12,15 @@ license = { text = "MIT" }
 dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
-gpu = ["torch>=2.5", "transformers>=4.44", "datasets>=3.0", "accelerate>=1.0"]
+gpu = [
+    "torch>=2.5",
+    "transformers>=4.44",
+    "datasets>=3.0",
+    "accelerate>=1.0",
+    # The GGUF run plan calls the `hf` CLI, which only exists in huggingface_hub 1.x;
+    # the first paid run resolved 1.29.0 transitively.
+    "huggingface_hub>=1.29,<2",
+]
 dev = ["pytest>=8.0", "ruff>=0.9"]
 
 [tool.setuptools.packages.find]

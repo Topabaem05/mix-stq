@@ -466,6 +466,7 @@ def test_unauthenticated_runner_hides_the_environment_and_the_stored_token_file(
         "        if 'TOKEN' in n.upper() and n != 'HF_HUB_DISABLE_IMPLICIT_TOKEN'\n"
         "    ),\n"
         "    'implicit': os.environ.get('HF_HUB_DISABLE_IMPLICIT_TOKEN'),\n"
+        "    'xet_disabled': os.environ.get('HF_HUB_DISABLE_XET'),\n"
         "    'home': os.environ.get('HOME'),\n"
         "    'hf_home': hf_home,\n"
         "    'xdg_cache': os.environ.get('XDG_CACHE_HOME'),\n"
@@ -506,6 +507,8 @@ def test_unauthenticated_runner_hides_the_environment_and_the_stored_token_file(
     report = json.loads(completed.stdout)
     assert report["token_vars"] == []
     assert report["implicit"] == "1"
+    # Without this the xet chunk cache keeps a second copy under $HF_HOME/xet.
+    assert report["xet_disabled"] == "1"
     assert report["home"] != str(home)
     assert report["home"].startswith(str(sandbox))
     assert report["hf_home"].startswith(str(sandbox))
@@ -536,6 +539,33 @@ def test_upload_phase_proves_the_dataset_repository_is_public(tmp_path: Path) ->
     assert refused.returncode != 0
     assert "not public" in refused.stderr
 
+    gated = _run_repo_check(
+        tmp_path, {"private": False, "gated": "auto", "id": run_plan.HF_DATASET_REPO}
+    )
+    assert gated.returncode != 0
+    assert "gated" in gated.stderr
+
+    ungated = _run_repo_check(
+        tmp_path, {"private": False, "gated": False, "id": run_plan.HF_DATASET_REPO}
+    )
+    assert ungated.returncode == 0, ungated.stderr
+
+    unreachable = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            run_plan.PUBLIC_REPO_CHECK_RUNNER,
+            (tmp_path / "no-such-metadata.json").as_uri(),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert unreachable.returncode != 0
+    assert "Traceback" not in unreachable.stderr
+    assert len(unreachable.stderr.strip().splitlines()) == 1
+
 
 def _fake_hub(tmp_path: Path) -> tuple[Path, Path, Path]:
     """A fake `hf download` that serves one path-in-repo per call and logs concurrency."""
@@ -554,12 +584,17 @@ def _fake_hub(tmp_path: Path) -> tuple[Path, Path, Path]:
         "assert argv[argv.index('--repo-type') + 1] == 'dataset'\n"
         "assert not [name for name in os.environ if 'TOKEN' in name.upper()\n"
         "            and name != 'HF_HUB_DISABLE_IMPLICIT_TOKEN'], 'token variable survived'\n"
+        "assert os.environ.get('HF_HUB_DISABLE_XET') == '1', 'xet cache was left enabled'\n"
         f"source = Path({str(remote)!r}) / path_in_repo\n"
         "if not source.is_file():\n"
         "    raise SystemExit('fake hub has no ' + path_in_repo)\n"
         "target = local_dir / path_in_repo\n"
         "target.parent.mkdir(parents=True, exist_ok=True)\n"
         "shutil.copyfile(source, target)\n"
+        # A real CLI leaves a hub cache copy behind; the sandbox must be released with the shard.
+        "cache = Path(os.environ['HF_HOME']) / 'cache-blob'\n"
+        "cache.parent.mkdir(parents=True, exist_ok=True)\n"
+        "shutil.copyfile(source, cache)\n"
         "(local_dir / '.cache' / 'huggingface').mkdir(parents=True, exist_ok=True)\n"
         "(local_dir / '.cache' / 'huggingface' / 'download-metadata').write_text('x')\n"
         "resident = [p for p in local_dir.rglob('*') if p.is_file() and '.cache' not in p.parts]\n"
@@ -620,6 +655,8 @@ def test_public_verify_runner_holds_at_most_one_shard_and_releases_every_copy(
     assert all((source / name).is_file() for name in shards)
     residency = [int(line.split()[0]) for line in log.read_text().splitlines()]
     assert residency == [1, 1]
+    # The per-file sandbox is released too, so no hub cache survives the verification.
+    assert not (tmp_path / "sandbox").exists()
 
     tampered = remote / prefix / "nested" / "qwen38-27b-iq3_xxs-00002-of-00002.gguf"
     tampered.write_bytes(b"tampered payload")

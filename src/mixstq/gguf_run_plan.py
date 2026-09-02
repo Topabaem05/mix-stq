@@ -186,18 +186,31 @@ UNAUTHENTICATED_RUNNER = (
     "os.environ['XDG_DATA_HOME'] = os.path.join(sandbox, 'data')\n"
     "os.environ['HF_HOME'] = os.path.join(sandbox, 'huggingface')\n"
     "os.environ['HF_HUB_DISABLE_IMPLICIT_TOKEN'] = '1'\n"
+    # Without this the xet chunk cache keeps a second copy of every file under $HF_HOME/xet.
+    "os.environ['HF_HUB_DISABLE_XET'] = '1'\n"
     "os.execv(sys.argv[2], sys.argv[2:])\n"
 )
 # urlopen raises on any non-2xx HTTPS response, so an unraised status is the success case; the
 # check that carries weight is that an unauthenticated reader sees private == False.
 PUBLIC_REPO_CHECK_RUNNER = (
-    "import json,sys,urllib.request\n"
-    "with urllib.request.urlopen(sys.argv[1], timeout=60) as response:\n"
-    "    status = getattr(response, 'status', None)\n"
-    "    body = response.read()\n"
+    "import json,sys,urllib.error,urllib.request\n"
+    "try:\n"
+    "    with urllib.request.urlopen(sys.argv[1], timeout=60) as response:\n"
+    "        status = getattr(response, 'status', None)\n"
+    "        body = response.read()\n"
+    "except urllib.error.HTTPError as error:\n"
+    "    sys.exit('repository metadata returned HTTP ' + str(error.code))\n"
+    "except (urllib.error.URLError, TimeoutError, OSError) as error:\n"
+    "    sys.exit('repository metadata is unreachable: ' + type(error).__name__)\n"
     "status in (200, None) or sys.exit('repository metadata returned HTTP ' + str(status))\n"
-    "metadata = json.loads(body.decode('utf-8'))\n"
+    "try:\n"
+    "    metadata = json.loads(body.decode('utf-8'))\n"
+    "except (UnicodeDecodeError, ValueError):\n"
+    "    sys.exit('repository metadata is not readable JSON')\n"
+    "isinstance(metadata, dict) or sys.exit('repository metadata is not an object')\n"
     "metadata.get('private') is False or sys.exit('dataset repository is not public')\n"
+    # A gated repository needs an accepted agreement, so its artifacts are not publicly fetchable.
+    "metadata.get('gated') in (False, None) or sys.exit('dataset repository is gated')\n"
     "isinstance(metadata.get('id'), str) or sys.exit('repository metadata is malformed')\n"
     "print('public dataset repository confirmed: ' + metadata['id'])\n"
 )
@@ -230,6 +243,7 @@ PUBLIC_VERIFY_RUNNER = (
     "    digest(path) == digest(public) or sys.exit('public sha256 mismatch for ' + remote)\n"
     "    print('verified ' + remote)\n"
     "    public.unlink()\n"
+    "    shutil.rmtree(sandbox, ignore_errors=True)\n"
     "shutil.rmtree(verify, ignore_errors=True)\n"
     "print('verified ' + str(len(files)) + ' files against the public copy')\n"
 )

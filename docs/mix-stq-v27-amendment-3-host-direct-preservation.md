@@ -41,8 +41,8 @@ Mac은 (a) 작은 증거 artifact 회수와 (b) 아래 2.4의 독립 확인만 �
 
 ### 2.2 write token 설치 — 사용자가 직접 수행한다
 
-- **사용자 본인이** ssh로 호스트에 접속해 `huggingface-cli login`으로 short-lived
-  **WRITE** token을 설치한다. 실행할 한 줄은 아래 4단계에 있다.
+- **사용자 본인이** ssh로 호스트에 접속해 `hf auth login`으로 short-lived **WRITE** token을
+  설치한다(정정 2 참조). 실행할 한 줄은 아래 4단계에 있다.
 - 에이전트/오케스트레이터는 token 값을 **취급하지 않는다.** 읽지 않고, 출력하지 않고,
   복사하지 않고, 어떤 파일에도 쓰지 않는다.
 - token 값은 저장소, 명령 인자(argv), 로그, planner 출력, artifact 어디에도 존재하지 않는다.
@@ -53,8 +53,7 @@ Mac은 (a) 작은 증거 artifact 회수와 (b) 아래 2.4의 독립 확인만 �
 - token은 이번 실행 범위로만 발급하고, 실행 종료 시 **사용자가 직접 폐기(revoke)** 한다.
   인스턴스 destroy는 폐기를 대신하지 않는다.
 
-역할 확인은 값 노출 없이 `hf auth whoami`(또는 `huggingface-cli whoami`) 출력의 role 표시로만
-한다.
+역할 확인은 값 노출 없이 `hf auth whoami` 출력의 role 표시로만 한다.
 
 ### 2.3 업로드 대상 — 사전등록 prefix 그대로
 
@@ -130,7 +129,7 @@ shard당 8 GiB 상한(`llama-gguf-split --split --split-max-size 8G`), 공개 �
 보지 않는다.
 
 ```
-ssh -t -p <PORT> root@<HOST> '/workspace/mix-stq/artifacts/qwen38-gguf-v27/venv/bin/huggingface-cli login'
+ssh -t -p <PORT> root@<HOST> '/workspace/mix-stq/artifacts/qwen38-gguf-v27/venv/bin/hf auth login'
 ```
 
 - `-t`가 TTY를 붙이므로 token 입력이 화면에 표시되지 않고 shell history에도 남지 않는다.
@@ -170,3 +169,19 @@ arm prefix 전체를 한 번에 받은 뒤 삭제했으므로, 추가 disk 최�
 만든 `.cache` 잔여물을 제거한다. 따라서 §2.4의 "추가 disk 최대 점유는 shard 하나(≤ 8 GiB)"는
 이제 참이다. 동시 잔존 파일 수가 1을 넘지 않는다는 것도 test로 강제한다
 (`test_public_verify_runner_holds_at_most_one_shard_and_releases_every_copy`).
+
+---
+
+## 부록: 2026-09-02 정정 2 — CLI 이름은 `huggingface-cli`가 아니라 `hf`다
+
+§2.2와 §4가 적었던 `huggingface-cli login`은 이 실행 환경에 존재하지 않는다. 1차 실행의 호스트
+bootstrap 로그가 설치한 `huggingface_hub`는 **1.29.0**이고, 1.x는 `huggingface-cli` entry point를
+제거하고 `hf`로 대체했다. 같은 로그에서 호스트가 실제로 실행한 명령도 `hf download`이며, planner의
+bootstrap 역시 `<venv>/bin/hf --help`를 probe한다. (1차 실행에서 `huggingface-cli upload`가 403을
+받은 것은 **Mac**의 구버전 CLI였고, 그 경로는 개정 3이 폐기했다.)
+
+정정 후 사용자가 실행할 한 줄은 §4에 반영했다. `hf auth login`(설치), `hf auth whoami`(역할 확인,
+값 노출 없음)를 쓴다. 사전등록 본문의 개정 3 고지에 적힌 `huggingface-cli login`이라는 이름도 이
+정정으로 대체된다. 사전등록 문서는 추가만 하고 기존 문구를 고치지 않는 규칙이므로 본문은 그대로
+두며, 실행에 쓰는 이름은 이 정정이 규정한다. token을 사용자가 대화형으로 설치하고 에이전트가 값을
+취급하지 않는다는 요구 자체는 바뀌지 않는다.

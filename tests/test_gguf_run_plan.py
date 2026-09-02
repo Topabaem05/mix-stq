@@ -115,7 +115,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [32, 1, 1, 2, 4, 5, 1, 4]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 1, 4]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -199,6 +199,34 @@ def test_plan_conversion_imatrix_quant_smoke_and_split_contracts(tmp_path: Path)
         for tier in run_plan.TIERS
     ]
     assert all(command[command.index("--split-max-size") + 1] == "8G" for command in plan["split"])
+
+
+def test_convert_emits_the_pinned_vision_projector_after_the_text_model(tmp_path: Path) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+    snapshot = str(artifact_root / "model-snapshot")
+    projector = str(artifact_root / "projector" / "qwen38-27b-mmproj-bf16.gguf")
+
+    text, vision = plan["convert"]
+    assert text[-1] == "--no-mtp"
+    assert "--mmproj" not in text
+    assert vision[:2] == text[:2]
+    assert vision[2] == run_plan.CONVERTER_RUNNER
+    assert vision[3] == text[3]
+    assert vision[-6:] == [
+        snapshot,
+        "--outfile",
+        projector,
+        "--outtype",
+        "bf16",
+        "--mmproj",
+    ]
+    assert "--no-mtp" not in vision
+
+    mkdir = next(command for command in plan["bootstrap"] if command[:2] == ["mkdir", "-p"])
+    assert str(artifact_root / "projector") in mkdir
+    for phase in ("imatrix", "quantize", "smoke", "audit", "split"):
+        assert all(projector not in command for command in plan[phase])
 
 
 def test_bootstrap_downloads_every_pinned_snapshot_file_without_multi_value_include(

@@ -169,6 +169,7 @@ def _paths(workspace: Path) -> dict[str, Path]:
         "manifest": root / "calibration" / "manifest.json",
         "bf16": root / "models" / "qwen38-27b-bf16.gguf",
         "imatrix": root / "imatrix" / "qwen38-27b.imatrix.gguf",
+        "projector": root / "projector" / "qwen38-27b-mmproj-bf16.gguf",
     }
     for tier in TIERS:
         slug = tier.lower()
@@ -210,6 +211,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
             root / "preflight",
             root / "calibration",
             root / "models",
+            root / "projector",
             root / "imatrix",
             root / "smoke",
             *(root / "splits" / tier.lower() for tier in TIERS),
@@ -310,7 +312,21 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
             "--outtype",
             "bf16",
             "--no-mtp",
-        ]
+        ],
+        # The preregistration requires the vision projector once, from the same pinned converter,
+        # and excludes it from every text bpw denominator and from the benchmarks.
+        [
+            python,
+            "-c",
+            CONVERTER_RUNNER,
+            llama_source,
+            paths["model_snapshot"],
+            "--outfile",
+            paths["projector"],
+            "--outtype",
+            "bf16",
+            "--mmproj",
+        ],
     ]
     imatrix = [
         [

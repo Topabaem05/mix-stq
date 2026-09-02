@@ -169,6 +169,28 @@ def _offer_machine_id(offer: dict) -> int | None:
     return machine_id
 
 
+VAST_STORAGE_HOURS_PER_MONTH = 730.0
+
+
+def _offer_storage_hourly(offer: dict, disk: float) -> float | None:
+    """Return the hourly storage charge Vast adds, or None when the offer does not expose it."""
+
+    storage_cost = _number(offer.get("storage_cost"))
+    if storage_cost is None or storage_cost < 0:
+        return None
+    disk_space = _number(offer.get("disk_space"))
+    billed_gb = disk if disk_space is None else min(float(disk_space), float(disk))
+    return storage_cost * billed_gb / VAST_STORAGE_HOURS_PER_MONTH
+
+
+def _offer_all_in_hourly(offer: dict, disk: float) -> float | None:
+    dph_total = _number(offer.get("dph_total"))
+    if dph_total is None:
+        return None
+    storage = _offer_storage_hourly(offer, disk)
+    return float(dph_total) + (storage or 0.0)
+
+
 def _offer_violation(
     offer: object,
     *,
@@ -199,6 +221,11 @@ def _offer_violation(
     dph_total = _number(offer.get("dph_total"))
     if dph_total is None or dph_total <= 0 or dph_total > max_price:
         return "offer hourly price is outside the accepted range"
+    # Vast bills storage on top of compute. Cap the all-in estimate where the offer exposes
+    # storage_cost; where it does not, the cap stays compute-only and says so in the summary.
+    all_in = _offer_all_in_hourly(offer, disk)
+    if all_in is None or all_in > max_price:
+        return "offer all-in hourly price including storage exceeds the cap"
     disk_space = _number(offer.get("disk_space"))
     if disk_space is None or disk_space <= 0 or disk_space < disk:
         return "offer disk is below the floor"
@@ -244,7 +271,10 @@ def _validate_exclusions(exclude_machines: object) -> tuple[int, ...]:
     )
 
 
-def _summarize_offer(offer: dict) -> dict:
+def _summarize_offer(offer: dict, disk: float | None = None) -> dict:
+    billed_disk = _number(offer.get("disk_space")) or 0 if disk is None else disk
+    storage_cost = _number(offer.get("storage_cost"))
+    all_in = _offer_all_in_hourly(offer, billed_disk)
     return {
         "id": offer["id"],
         "gpu": offer.get("gpu_name"),
@@ -258,6 +288,8 @@ def _summarize_offer(offer: dict) -> dict:
         "reliability": round(_offer_reliability(offer) or 0.0, 4),
         "geo": offer.get("geolocation"),
         "machine_id": _offer_machine_id(offer),
+        "dph_all_in": round(all_in, 4) if all_in is not None else None,
+        "storage_cost_per_gb_month_usd": storage_cost,
     }
 
 
@@ -342,7 +374,7 @@ def search(
     exclude_machines: tuple[int, ...] | list[int] | None = None,
 ) -> list[dict]:
     return [
-        _summarize_offer(offer)
+        _summarize_offer(offer, disk)
         for offer in _search_offers(
             gpu,
             max_price,
@@ -535,6 +567,9 @@ def main() -> int:
     up.add_argument("--exclude-machine", type=int, action="append", default=None,
                     dest="exclude_machine",
                     help="skip this Vast machine id; repeatable")
+    up.add_argument("--any-machine", action="store_true",
+                    help="allow --confirm to rent a machine the operator has not pinned with "
+                         "--machine or --offer")
     up.add_argument("--confirm", action="store_true")
 
     sub.add_parser("list")
@@ -581,6 +616,11 @@ def main() -> int:
             args.min_download_mbps,
             args.min_reliability,
         )
+        if args.confirm and args.offer is None and args.machine is None and not args.any_machine:
+            raise VastError(
+                "refusing to rent an operator-unseen machine: pass --machine or --offer, or "
+                "--any-machine to accept the cheapest revalidated offer"
+            )
         if not args.confirm:
             print("DRY RUN. would create at hourly cap %.4f" % args.max_hourly)
             print("re-run with --confirm to spend money")
@@ -626,7 +666,7 @@ def main() -> int:
         )
         if violation is not None:
             raise VastError("fresh offer failed revalidation: " + violation)
-        summary = _summarize_offer(offer)
+        summary = _summarize_offer(offer, args.disk)
         offer_id = summary["id"]
         print(json.dumps({"revalidated_offer": summary}, indent=1))
         response = create(offer_id, args.image, args.disk, args.onstart)

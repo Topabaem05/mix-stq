@@ -520,6 +520,8 @@ def test_search_adds_exact_raw_constraints_and_returns_resource_fields(monkeypat
             "reliability": 0.98,
             "geo": "KR",
             "machine_id": None,
+            "dph_all_in": 0.5,
+            "storage_cost_per_gb_month_usd": None,
         }
     ]
 
@@ -628,6 +630,87 @@ def test_search_cli_passes_optional_resource_constraints(monkeypatch):
     }
 
 
+def test_confirmed_create_refuses_an_operator_unseen_machine(monkeypatch, tmp_path):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "_search_offers",
+        lambda *_args, **_kwargs: pytest.fail("an unpinned confirm must not search"),
+    )
+    monkeypatch.setattr(
+        vast_control,
+        "create",
+        lambda *_args, **_kwargs: pytest.fail("an unpinned confirm must not create"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["vast-control", "create", "--max-hourly", "0.75", "--confirm"],
+    )
+
+    with pytest.raises(vast_control.VastError, match="--machine"):
+        vast_control.main()
+
+    assert not state_path.exists()
+
+
+def test_any_machine_flag_allows_a_confirm_without_a_pinned_machine(monkeypatch, tmp_path):
+    state_path = tmp_path / "mixstq" / "vast_state.json"
+    monkeypatch.setattr(vast_control, "STATE", state_path)
+    monkeypatch.setattr(
+        vast_control,
+        "_search_offers",
+        lambda *_args, **_kwargs: [_offer(offer_id=11, machine_id=71654)],
+    )
+    created = {}
+
+    def fake_create(offer_id, *_args, **_kwargs):
+        created["offer_id"] = offer_id
+        return {"success": True, "new_contract": 12}
+
+    monkeypatch.setattr(vast_control, "create", fake_create)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["vast-control", "create", "--max-hourly", "0.75", "--any-machine", "--confirm"],
+    )
+
+    assert vast_control.main() == 0
+    assert created["offer_id"] == 11
+
+
+def test_price_cap_covers_storage_when_the_offer_exposes_it(monkeypatch):
+    constraints = {
+        "gpu": "",
+        "max_price": 1.20,
+        "min_vram": 24,
+        "disk": 380,
+        "min_system_ram_gb": 0.0,
+        "min_cpu_cores": 0.0,
+        "min_download_mbps": 0.0,
+        "min_reliability": 0.0,
+        "exclude_machines": (),
+    }
+    # $0.20/GB/month over 380 GB is $0.104/hour on Vast's 730-hour month.
+    over = _offer(dph_total=1.15, disk_space=400, storage_cost=0.2)
+    assert vast_control._offer_violation(over, **constraints) is not None
+    under = _offer(dph_total=1.05, disk_space=400, storage_cost=0.2)
+    assert vast_control._offer_violation(under, **constraints) is None
+
+    compute_only = _offer(dph_total=1.15, disk_space=400)
+    assert vast_control._offer_violation(compute_only, **constraints) is None
+
+    monkeypatch.setattr(
+        vast_control, "_request", lambda *_args, **_kwargs: {"offers": [under, compute_only]}
+    )
+    rows = vast_control.search("", 1.20, 24, 380, 10)
+    assert rows[0]["dph_all_in"] == round(1.05 + 0.2 * 380 / 730, 4)
+    assert rows[0]["storage_cost_per_gb_month_usd"] == 0.2
+    assert rows[1]["dph_all_in"] == 1.15
+    assert rows[1]["storage_cost_per_gb_month_usd"] is None
+
+
 def test_search_reports_machine_id_and_honours_exclusions(monkeypatch):
     monkeypatch.setattr(
         vast_control,
@@ -726,6 +809,7 @@ def test_confirmed_create_excludes_machines_and_fails_closed_when_none_remain(
             "142444",
             "--exclude-machine",
             "71654",
+            "--any-machine",
             "--confirm",
         ],
     )
@@ -755,7 +839,7 @@ def test_confirmed_create_revalidates_the_fresh_offer_and_refuses_a_violation(
     monkeypatch.setattr(
         sys,
         "argv",
-        ["vast-control", "create", "--max-hourly", "0.75", "--confirm"],
+        ["vast-control", "create", "--max-hourly", "0.75", "--any-machine", "--confirm"],
     )
 
     with pytest.raises(vast_control.VastError, match="revalidation"):

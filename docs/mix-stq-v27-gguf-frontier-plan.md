@@ -390,6 +390,10 @@ machine on every `/bundles` call, so the id from this search is only a preferenc
 re-searches, re-checks every numeric constraint against the fresh offer, and rents the id that same
 response returned. Add `--exclude-machine <ID>` for any machine already observed to fail (machine
 `142444` could not attach a GPU to a container, twice), and `--machine <ID>` to pin a known-good one.
+`--confirm` refuses to rent a machine the operator has not pinned with `--machine` or `--offer`
+unless `--any-machine` is passed. The price cap is applied to an all-in estimate, compute plus
+`storage_cost x requested GB / 730`, wherever the offer exposes `storage_cost`; where it does not,
+the cap is compute-only and the summary row records that with a null storage cost.
 
 - [ ] **Step 3: Execute phases in one tmux session**
 

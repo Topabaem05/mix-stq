@@ -1031,6 +1031,10 @@ def _require_args(parser: SafeArgumentParser, args: argparse.Namespace, names: S
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
+    if args.allow_missing_task6_evidence and args.action != "plan":
+        # The escape hatch only shapes the emitted upload phase; accepting it elsewhere would
+        # imply the preflights and the audit honour it, and they do not.
+        parser.exit(2, "error: --allow-missing-task6-evidence applies only to --action plan\n")
     try:
         if args.action == "plan":
             _require_args(parser, args, ("workspace", "run_commit"))

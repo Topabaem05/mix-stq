@@ -1131,6 +1131,34 @@ def _run_cli(repo: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_allow_missing_task6_evidence_is_rejected_outside_plan_building(tmp_path: Path) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    workspace = tmp_path / "workspace"
+
+    accepted = _run_cli(
+        repo,
+        "--workspace",
+        str(workspace),
+        "--run-commit",
+        RUN_COMMIT,
+        "--allow-missing-task6-evidence",
+    )
+    assert accepted.returncode == 0
+
+    for action in ("audit", "model-preflight", "host-preflight", "token-preflight"):
+        refused = _run_cli(
+            repo,
+            "--action",
+            action,
+            "--workspace",
+            str(workspace),
+            "--allow-missing-task6-evidence",
+        )
+        assert refused.returncode == 2
+        assert "allow-missing-task6-evidence" in refused.stderr
+    assert not workspace.exists()
+
+
 def test_cli_help_json_shell_and_invalid_inputs_have_no_side_effects(tmp_path: Path) -> None:
     repo = Path(__file__).resolve().parents[1]
     workspace = tmp_path / "workspace"

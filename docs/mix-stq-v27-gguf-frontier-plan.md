@@ -414,6 +414,23 @@ BF16 input/imatrix SHA for quantized arms, and no unsupported/NaN/abort marker.
 - Consumes: only smoke-approved GGUF files from Task 5.
 - Produces: complete metrics for all five arms and public HF paths for all four quantized arms.
 
+Task 6 writes into three pinned directories under `artifacts/qwen38-gguf-v27/`, and the planner
+requires all three by name. Run 1 used `eval/` (singular) and never created a bench directory, so
+these names are now fixed in `gguf_run_plan` and must be used verbatim:
+
+| directory | contents |
+|---|---|
+| `eval/` | per-arm 800-item evaluator JSON, `.complete.json` markers, progress files, paired statistics |
+| `ppl/` | held-out `llama-perplexity` logs and per-arm PPL JSON |
+| `bench/` | `llama-bench` JSON/Markdown and the VRAM samples taken around each run |
+| `wikitext/` | the pinned PPL corpus and its manifest, copied from preserved local evidence |
+
+Each must exist and hold at least one file before the `upload` phase will run; a missing or empty
+one fails the phase. After the paired statistics, PPL and llama-bench outputs are all in place,
+write `eval/.task6-complete`, which the upload phase checks first so an in-order runner cannot
+publish a partial run. `--allow-missing-task6-evidence` drops both the marker guard and the three
+Task 6 requirements; it is off by default and is only for republishing Task 5 artifacts.
+
 - [ ] **Step 1: Run each arm in a fresh llama-server process**
 
 For each model, wait for `/health`, run the strict 800-item evaluator, validate its completion marker,

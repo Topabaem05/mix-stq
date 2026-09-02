@@ -133,7 +133,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 14]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 15]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -243,9 +243,14 @@ def test_audit_phase_writes_one_gguf_audit_json_per_arm(tmp_path: Path) -> None:
     assert str(artifact_root / "audits") in mkdir
 
 
-def test_evidence_assembly_gathers_task_six_outputs_and_tolerates_absence(
-    tmp_path: Path,
-) -> None:
+def _run_evidence_assembly(evidence: Path, pairs: list[tuple[str, Path]]):
+    argv = [sys.executable, "-c", run_plan.EVIDENCE_ASSEMBLY_RUNNER, str(evidence)]
+    for mode, path in pairs:
+        argv.extend((mode, str(path)))
+    return subprocess.run(argv, capture_output=True, text=True, timeout=30, check=False)
+
+
+def test_evidence_assembly_pins_the_task_six_directories_and_fails_closed(tmp_path: Path) -> None:
     plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
     artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
 
@@ -255,59 +260,90 @@ def test_evidence_assembly_gathers_task_six_outputs_and_tolerates_absence(
         "smoke",
         "preflight",
         "audits",
-        "evals",
-        "bench",
+        "wikitext",
     )
-    assembly = plan["upload"][1]
-    assert assembly[1:3] == ["-c", run_plan.EVIDENCE_ASSEMBLY_RUNNER]
+    # Run 1 wrote its per-arm results to eval/ (singular) and never created a bench directory;
+    # pin the names so the operator and the planner cannot disagree again.
+    assert run_plan.TASK6_EVIDENCE_SOURCES == ("eval", "ppl", "bench")
+
+    assembly = next(
+        command for command in plan["upload"] if run_plan.EVIDENCE_ASSEMBLY_RUNNER in command
+    )
     assert assembly[3] == str(artifact_root / "evidence")
-    assert assembly[4:] == [str(artifact_root / name) for name in run_plan.EVIDENCE_SOURCES]
-    assert "cp" not in assembly
+    assert assembly[4:] == [
+        argument
+        for name in (*run_plan.EVIDENCE_SOURCES, *run_plan.TASK6_EVIDENCE_SOURCES)
+        for argument in ("required", str(artifact_root / name))
+    ]
 
     evidence = tmp_path / "evidence"
-    evidence.mkdir()
     present = tmp_path / "audits"
     present.mkdir()
     (present / "BF16.json").write_text("{}", encoding="utf-8")
-    nested = tmp_path / "evals"
+    nested = tmp_path / "eval"
     (nested / "markers").mkdir(parents=True)
     (nested / "markers" / "BF16.complete.json").write_text("{}", encoding="utf-8")
+    empty_dir = tmp_path / "bench"
+    empty_dir.mkdir()
 
-    tolerated = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            run_plan.EVIDENCE_ASSEMBLY_RUNNER,
-            str(evidence),
-            str(present),
-            str(nested),
-            str(tmp_path / "bench"),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
+    gathered = _run_evidence_assembly(
+        evidence, [("required", present), ("required", nested), ("optional", tmp_path / "ppl")]
     )
-    assert tolerated.returncode == 0, tolerated.stderr
+    assert gathered.returncode == 0, gathered.stderr
     assert (evidence / "audits" / "BF16.json").is_file()
-    assert (evidence / "evals" / "markers" / "BF16.complete.json").is_file()
-    assert not (evidence / "bench").exists()
+    assert (evidence / "eval" / "markers" / "BF16.complete.json").is_file()
+    assert not (evidence / "ppl").exists()
 
-    empty = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            run_plan.EVIDENCE_ASSEMBLY_RUNNER,
-            str(evidence),
-            str(tmp_path / "absent"),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
+    for missing in (tmp_path / "ppl", empty_dir):
+        refused = _run_evidence_assembly(
+            evidence, [("required", present), ("required", missing)]
+        )
+        assert refused.returncode != 0
+        assert missing.name in refused.stderr
+
+    nothing = _run_evidence_assembly(evidence, [("optional", tmp_path / "ppl")])
+    assert nothing.returncode != 0
+    assert "no evidence" in nothing.stderr
+
+
+def test_upload_phase_refuses_to_start_before_task_six_is_complete(tmp_path: Path) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+
+    assert run_plan.TASK6_COMPLETE_MARKER == "eval/.task6-complete"
+    assert plan["upload"][0] == [
+        "test",
+        "-f",
+        str(artifact_root / "eval" / ".task6-complete"),
+    ]
+    assert plan["upload"].index(plan["upload"][0]) == 0
+
+
+def test_allow_missing_task6_evidence_is_off_by_default_and_only_downgrades_task_six(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    artifact_root = workspace / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
+    strict = run_plan.build_plan(workspace, RUN_COMMIT)
+    relaxed = run_plan.build_plan(workspace, RUN_COMMIT, allow_missing_task6_evidence=True)
+
+    assert strict != relaxed
+    for phase in run_plan.PHASES:
+        if phase != "upload":
+            assert strict[phase] == relaxed[phase]
+
+    # The marker guard is the operator's own attestation, so the escape hatch drops it too.
+    assert relaxed["upload"][0][:2] != ["test", "-f"]
+    assert len(relaxed["upload"]) == len(strict["upload"]) - 1
+
+    assembly = next(
+        command for command in relaxed["upload"] if run_plan.EVIDENCE_ASSEMBLY_RUNNER in command
     )
-    assert empty.returncode != 0
-    assert "no evidence" in empty.stderr
+    modes = dict(zip(assembly[5::2], assembly[4::2], strict=True))
+    for name in run_plan.EVIDENCE_SOURCES:
+        assert modes[str(artifact_root / name)] == "required"
+    for name in run_plan.TASK6_EVIDENCE_SOURCES:
+        assert modes[str(artifact_root / name)] == "optional"
 
 
 def test_upload_phase_runs_after_split_and_publishes_the_preregistered_prefix(

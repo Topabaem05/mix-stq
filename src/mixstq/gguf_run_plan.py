@@ -98,10 +98,13 @@ EVIDENCE_SOURCES = (
     "smoke",
     "preflight",
     "audits",
-    # Task 6 writes these on the host; the assembly tolerates their absence.
-    "evals",
-    "bench",
+    "wikitext",
 )
+# Run 1 wrote per-arm results to eval/ (singular) and never created a bench directory, so the
+# operator and the planner must agree on these names. All three are required: measuring them is
+# the point of the second paid run.
+TASK6_EVIDENCE_SOURCES = ("eval", "ppl", "bench")
+TASK6_COMPLETE_MARKER = "eval/.task6-complete"
 CONVERTER_RUNNER = (
     "import runpy,sys;"
     "from pathlib import Path;"
@@ -123,18 +126,23 @@ HELP_PROBE_RUNNER = (
     "'usage' in text.lower() or sys.exit('pinned executable printed no usage text');"
     "completed.returncode in (0,1) or sys.exit('pinned executable help probe failed')"
 )
-# Gather the small artifacts into one evidence directory. Task 6 output directories may not exist
-# yet, so a missing source is skipped rather than failing the phase; an empty gather still fails.
+# Gather the small artifacts into one evidence directory. A required source must exist and hold at
+# least one file, so an upload cannot silently publish an empty or missing result set; only the
+# planner's --allow-missing-task6-evidence escape marks the Task 6 directories optional.
 EVIDENCE_ASSEMBLY_RUNNER = (
     "import shutil,sys\n"
     "from pathlib import Path\n"
     "evidence = Path(sys.argv[1])\n"
+    "entries = sys.argv[2:]\n"
+    "entries and len(entries) % 2 == 0 or sys.exit('expected mode/path pairs')\n"
     "evidence.mkdir(parents=True, exist_ok=True)\n"
     "gathered = 0\n"
-    "for argument in sys.argv[2:]:\n"
+    "for mode, argument in zip(entries[::2], entries[1::2]):\n"
     "    source = Path(argument)\n"
-    "    if not source.is_dir():\n"
-    "        print('skipped absent ' + source.name)\n"
+    "    populated = source.is_dir() and any(p.is_file() for p in source.rglob('*'))\n"
+    "    if not populated:\n"
+    "        mode == 'optional' or sys.exit('required evidence is missing or empty: ' + source.name)\n"
+    "        print('skipped absent optional ' + source.name)\n"
     "        continue\n"
     "    shutil.copytree(source, evidence / source.name, dirs_exist_ok=True)\n"
     "    gathered += 1\n"
@@ -302,7 +310,12 @@ def _command_strings(command: Sequence[object]) -> list[str]:
     return [os.fspath(value) if isinstance(value, os.PathLike) else str(value) for value in command]
 
 
-def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
+def build_plan(
+    workspace: Path,
+    run_commit: str,
+    *,
+    allow_missing_task6_evidence: bool = False,
+) -> dict[str, list[list[str]]]:
     """Return the immutable nine-phase run plan as argv arrays without executing it."""
 
     workspace = _validate_workspace(workspace)
@@ -549,16 +562,38 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
         ]
         for tier in TIERS
     ]
-    upload: list[list[object]] = [
-        [python, "-c", PUBLIC_REPO_CHECK_RUNNER, f"https://huggingface.co/api/datasets/{HF_DATASET_REPO}"],
+    upload: list[list[object]] = []
+    if not allow_missing_task6_evidence:
+        # An in-order runner must not be able to publish before Task 6 closed; the operator writes
+        # this marker after the paired statistics, PPL and llama-bench outputs are in place.
+        upload.append(["test", "-f", root / TASK6_COMPLETE_MARKER])
+    upload.append(
+        [
+            python,
+            "-c",
+            PUBLIC_REPO_CHECK_RUNNER,
+            f"https://huggingface.co/api/datasets/{HF_DATASET_REPO}",
+        ]
+    )
+    task6_mode = "optional" if allow_missing_task6_evidence else "required"
+    upload.append(
         [
             python,
             "-c",
             EVIDENCE_ASSEMBLY_RUNNER,
             paths["evidence"],
-            *(root / name for name in EVIDENCE_SOURCES),
+            *(
+                argument
+                for name in EVIDENCE_SOURCES
+                for argument in ("required", root / name)
+            ),
+            *(
+                argument
+                for name in TASK6_EVIDENCE_SOURCES
+                for argument in (task6_mode, root / name)
+            ),
         ]
-    ]
+    )
     for name, local in (
         *((tier, paths[f"split_dir_{tier}"]) for tier in TIERS),
         ("projector", paths["projector_dir"]),
@@ -941,6 +976,11 @@ def _parser() -> SafeArgumentParser:
     parser.add_argument("--corpus", type=Path)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--timeout-seconds", type=float, default=60.0)
+    parser.add_argument(
+        "--allow-missing-task6-evidence",
+        action="store_true",
+        help="publish without the Task 6 completion marker and with eval/ppl/bench optional",
+    )
     return parser
 
 
@@ -955,7 +995,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.action == "plan":
             _require_args(parser, args, ("workspace", "run_commit"))
-            result = build_plan(args.workspace, args.run_commit)
+            result = build_plan(
+                args.workspace,
+                args.run_commit,
+                allow_missing_task6_evidence=args.allow_missing_task6_evidence,
+            )
             if args.format == "shell":
                 sys.stdout.write(_format_shell(result))
             else:

@@ -141,17 +141,43 @@ EVIDENCE_ASSEMBLY_RUNNER = (
     "    print('gathered ' + source.name)\n"
     "gathered or sys.exit('no evidence directory was available to gather')\n"
 )
-# Amendment 3 moves the mandatory public verification onto the host. The re-download must be
-# unauthenticated, so it runs in a fresh process with every Hub and token environment variable
-# removed; no credential is ever named or carried in the planner output.
+# Amendment 3 moves the mandatory public verification onto the host. The host CLI is logged in,
+# so stripping the environment is not enough: huggingface_hub falls back to the token file at
+# $HF_HOME/token, which defaults to $HOME/.cache/huggingface/token. The re-download therefore
+# runs with the environment stripped, implicit tokens disabled, and HOME/HF_HOME/XDG pointed at
+# a fresh empty sandbox, so no stored credential is reachable. No credential is ever named in
+# the planner output.
 UNAUTHENTICATED_RUNNER = (
-    "import os,sys\n"
+    "import os,sys,tempfile\n"
     "for name in list(os.environ):\n"
     "    upper = name.upper()\n"
     "    if 'TOKEN' in upper or upper.startswith('HF_') or upper.startswith('HUGGINGFACE'):\n"
     "        os.environ.pop(name, None)\n"
-    "len(sys.argv) > 1 or sys.exit('no command to run unauthenticated')\n"
-    "os.execv(sys.argv[1], sys.argv[1:])\n"
+    "len(sys.argv) > 2 or sys.exit('usage: <sandbox-root> <command> [argument ...]')\n"
+    "root = sys.argv[1]\n"
+    "os.makedirs(root, exist_ok=True)\n"
+    "sandbox = tempfile.mkdtemp(prefix='unauthenticated-', dir=root)\n"
+    "os.environ['HOME'] = sandbox\n"
+    "os.environ['USERPROFILE'] = sandbox\n"
+    "os.environ['XDG_CACHE_HOME'] = os.path.join(sandbox, 'cache')\n"
+    "os.environ['XDG_CONFIG_HOME'] = os.path.join(sandbox, 'config')\n"
+    "os.environ['XDG_DATA_HOME'] = os.path.join(sandbox, 'data')\n"
+    "os.environ['HF_HOME'] = os.path.join(sandbox, 'huggingface')\n"
+    "os.environ['HF_HUB_DISABLE_IMPLICIT_TOKEN'] = '1'\n"
+    "os.execv(sys.argv[2], sys.argv[2:])\n"
+)
+# urlopen raises on any non-2xx HTTPS response, so an unraised status is the success case; the
+# check that carries weight is that an unauthenticated reader sees private == False.
+PUBLIC_REPO_CHECK_RUNNER = (
+    "import json,sys,urllib.request\n"
+    "with urllib.request.urlopen(sys.argv[1], timeout=60) as response:\n"
+    "    status = getattr(response, 'status', None)\n"
+    "    body = response.read()\n"
+    "status in (200, None) or sys.exit('repository metadata returned HTTP ' + str(status))\n"
+    "metadata = json.loads(body.decode('utf-8'))\n"
+    "metadata.get('private') is False or sys.exit('dataset repository is not public')\n"
+    "isinstance(metadata.get('id'), str) or sys.exit('repository metadata is malformed')\n"
+    "print('public dataset repository confirmed: ' + metadata['id'])\n"
 )
 # Compare every uploaded object against its public copy and release the verified copy at once, so
 # the extra disk the verification needs never exceeds one shard.
@@ -249,6 +275,7 @@ def _paths(workspace: Path) -> dict[str, Path]:
         "projector_dir": root / "projector",
         "evidence": root / "evidence",
         "public_verify": root / "public-verify",
+        "unauthenticated_home": root / "public-verify" / "unauthenticated-home",
     }
     for tier in TIERS:
         slug = tier.lower()
@@ -515,6 +542,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
         for tier in TIERS
     ]
     upload: list[list[object]] = [
+        [python, "-c", PUBLIC_REPO_CHECK_RUNNER, f"https://huggingface.co/api/datasets/{HF_DATASET_REPO}"],
         [
             python,
             "-c",
@@ -545,6 +573,7 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
                     python,
                     "-c",
                     UNAUTHENTICATED_RUNNER,
+                    paths["unauthenticated_home"],
                     paths["hf"],
                     "download",
                     HF_DATASET_REPO,

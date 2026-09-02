@@ -105,6 +105,24 @@ def _vocab_model(tmp_path: Path) -> Path:
     return model
 
 
+def _run_repo_check(tmp_path: Path, metadata: dict[str, object]):
+    """Drive the repository-visibility runner against a local metadata document.
+
+    urlopen raises on any non-2xx HTTPS response, so the runner's status check only has to
+    accept the file scheme the test uses, where status is None.
+    """
+
+    served = tmp_path / "dataset-metadata.json"
+    served.write_text(json.dumps(metadata), encoding="utf-8")
+    return subprocess.run(
+        [sys.executable, "-c", run_plan.PUBLIC_REPO_CHECK_RUNNER, served.as_uri()],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
 def _assert_safe(text: str) -> None:
     assert all(marker not in text for marker in FORBIDDEN)
     assert all(pattern.search(text) is None for pattern in SECRET_PATTERNS)
@@ -115,7 +133,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 19]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 20]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -240,7 +258,7 @@ def test_evidence_assembly_gathers_task_six_outputs_and_tolerates_absence(
         "evals",
         "bench",
     )
-    assembly = plan["upload"][0]
+    assembly = plan["upload"][1]
     assert assembly[1:3] == ["-c", run_plan.EVIDENCE_ASSEMBLY_RUNNER]
     assert assembly[3] == str(artifact_root / "evidence")
     assert assembly[4:] == [str(artifact_root / name) for name in run_plan.EVIDENCE_SOURCES]
@@ -341,9 +359,10 @@ def test_upload_phase_verifies_every_object_with_an_unauthenticated_re_download(
     for command in downloads:
         assert command[1] == "-c"
         assert command[2] == run_plan.UNAUTHENTICATED_RUNNER
-        assert command[3] == hf
-        assert command[4] == "download"
-        assert command[5] == run_plan.HF_DATASET_REPO
+        assert command[3] == str(artifact_root / "public-verify" / "unauthenticated-home")
+        assert command[4] == hf
+        assert command[5] == "download"
+        assert command[6] == run_plan.HF_DATASET_REPO
         assert command[command.index("--repo-type") + 1] == "dataset"
         assert command[command.index("--local-dir") + 1] == str(verify_root)
         include = command[command.index("--include") + 1 :]
@@ -374,24 +393,110 @@ def test_upload_phase_verifies_every_object_with_an_unauthenticated_re_download(
         assert upload_index < download_index < verify_index
 
 
-def test_upload_phase_argv_carries_no_credential_and_strips_the_hub_environment() -> None:
+def test_upload_phase_argv_carries_no_credential() -> None:
     plan = run_plan.build_plan(Path("/workspace"), RUN_COMMIT)
-    serialized = json.dumps(plan)
-    _assert_safe(serialized)
+    _assert_safe(json.dumps(plan))
 
     for command in plan["upload"]:
         assert "--token" not in command
         assert not any("=" in argument and argument.split("=")[0].isupper() for argument in command)
         assert "env" not in command
-        assert all(
-            "TOKEN" not in argument.upper()
-            for argument in command
-            if argument != run_plan.UNAUTHENTICATED_RUNNER
-        )
 
-    stripped = run_plan.UNAUTHENTICATED_RUNNER
-    assert "os.execv" in stripped
-    assert "TOKEN" in stripped and "HUGGINGFACE" in stripped
+
+def test_unauthenticated_runner_hides_the_environment_and_the_stored_token_file(
+    tmp_path: Path,
+) -> None:
+    """The host CLI is logged in, so stripping HF_TOKEN alone is not enough.
+
+    huggingface_hub falls back to the token FILE at $HF_HOME/token, which defaults to
+    $HOME/.cache/huggingface/token: exactly what the user's `hf auth login` writes.
+    """
+
+    home = tmp_path / "home"
+    stored = home / ".cache" / "huggingface" / "token"
+    stored.parent.mkdir(parents=True)
+    stored.write_text("stored-token-must-stay-unreadable\n", encoding="utf-8")
+    sandbox = tmp_path / "sandbox"
+    probe = _fake_executable(
+        tmp_path,
+        "import json,os,sys\n"
+        "from pathlib import Path\n"
+        "hf_home = os.environ.get('HF_HOME', '')\n"
+        "report = {\n"
+        "    'token_vars': sorted(\n"
+        "        n for n in os.environ\n"
+        "        if 'TOKEN' in n.upper() and n != 'HF_HUB_DISABLE_IMPLICIT_TOKEN'\n"
+        "    ),\n"
+        "    'implicit': os.environ.get('HF_HUB_DISABLE_IMPLICIT_TOKEN'),\n"
+        "    'home': os.environ.get('HOME'),\n"
+        "    'hf_home': hf_home,\n"
+        "    'xdg_cache': os.environ.get('XDG_CACHE_HOME'),\n"
+        "    'token_file_visible': bool(hf_home) and Path(hf_home, 'token').exists(),\n"
+        "    'legacy_token_visible': Path(\n"
+        "        os.environ.get('HOME', '/nonexistent'), '.cache', 'huggingface', 'token'\n"
+        "    ).exists(),\n"
+        "    'argv': sys.argv[1:],\n"
+        "}\n"
+        "print(json.dumps(report))\n",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            run_plan.UNAUTHENTICATED_RUNNER,
+            str(sandbox),
+            str(probe),
+            "download",
+            "topabaem/mix-stq-artifacts",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env={
+            "PATH": os.defpath,
+            "HOME": str(home),
+            "HF_TOKEN": "hf_environment_token_value",
+            "HUGGING_FACE_HUB_TOKEN": "hf_second_environment_token_value",
+            "HF_HOME": str(home / ".cache" / "huggingface"),
+            "HF_HUB_OFFLINE": "1",
+        },
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads(completed.stdout)
+    assert report["token_vars"] == []
+    assert report["implicit"] == "1"
+    assert report["home"] != str(home)
+    assert report["home"].startswith(str(sandbox))
+    assert report["hf_home"].startswith(str(sandbox))
+    assert report["xdg_cache"].startswith(str(sandbox))
+    assert report["token_file_visible"] is False
+    assert report["legacy_token_visible"] is False
+    assert report["argv"] == ["download", "topabaem/mix-stq-artifacts"]
+    assert stored.read_text(encoding="utf-8").strip() == "stored-token-must-stay-unreadable"
+
+
+def test_upload_phase_proves_the_dataset_repository_is_public(tmp_path: Path) -> None:
+    plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
+    check = next(
+        command for command in plan["upload"] if run_plan.PUBLIC_REPO_CHECK_RUNNER in command
+    )
+    assert check[-1] == (
+        f"https://huggingface.co/api/datasets/{run_plan.HF_DATASET_REPO}"
+    )
+    uploads = [index for index, command in enumerate(plan["upload"]) if "upload" in command]
+    assert plan["upload"].index(check) < min(uploads)
+
+    served = {"private": False, "id": run_plan.HF_DATASET_REPO}
+    accepted = _run_repo_check(tmp_path, served)
+    assert accepted.returncode == 0, accepted.stderr
+    assert run_plan.HF_DATASET_REPO in accepted.stdout
+
+    refused = _run_repo_check(tmp_path, {"private": True, "id": run_plan.HF_DATASET_REPO})
+    assert refused.returncode != 0
+    assert "not public" in refused.stderr
 
 
 def test_public_verify_runner_matches_hashes_and_releases_the_downloaded_copy(

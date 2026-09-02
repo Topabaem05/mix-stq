@@ -236,3 +236,29 @@ order로 구분자 없이 연결한 뒤 `mixstq.llama_calibration.normalize_text
 어떤 arm의 PPL, 어떤 arm의 llama-bench 값도 관찰하기 전에 이루어졌다. 따라서 어떤 비교
 결과도 이 결정에 영향을 줄 수 없었다. 근거와 증거는
 [`mix-stq-v27-amendment-2-imatrix-chunks-and-ppl-serialization.md`](mix-stq-v27-amendment-2-imatrix-chunks-and-ppl-serialization.md)에 있다.
+
+---
+
+## 개정 3 (2026-09-02): 보존 전송을 호스트 직접 업로드로 바꾼다
+
+5단계의 "한 arm씩 trusted local machine으로 전송하고 local write token으로 업로드한다"를
+개정한다. 1차 유료 실행에서 호스트→Mac 링크는 단일 stream 1.18 MB/s, 3 stream 병렬에서도 약
+3.1 MB/s(6 stream은 더 나쁨)로 실측되었고, 네 arm의 shard 62.05 GB 왕복은 남은 credit 안에서
+불가능하다. 따라서 shard는 Mac을 경유하지 않고 **임대 호스트가 Hugging Face로 직접 업로드**한다.
+
+write token은 **사용자가 직접** ssh로 호스트에 접속해 `huggingface-cli login`으로 설치한다.
+에이전트는 token 값을 취급하지 않으며, token은 저장소·argv·로그·planner 출력·artifact 어디에도
+남지 않는다. token은 이번 실행 범위로 발급하고 종료 시 사용자가 폐기한다.
+
+업로드 대상은 사전등록 prefix `topabaem/mix-stq-artifacts` 의
+`paid-run/qwen38-gguf-frontier-v27/` 그대로이며 arm별 하위 디렉터리와 `evidence/`를 쓴다.
+모든 shard의 public unauthenticated 재다운로드 + sha256 대조 의무는 유지하되, 수행 위치를
+호스트로 옮긴다(credential 환경변수를 제거한 새 프로세스, shard 단위 검증 후 즉시 삭제).
+Mac에서는 같은 shard의 LFS pointer sha256을 독립적으로 대조한다. 네 arm 전부가 공개 marker를
+확보한 뒤에만 인스턴스를 파기하며, BF16 monolith는 업로드하지 않고 재생성 manifest와 SHA로
+보존한다.
+
+이 개정은 측정 방법·표본·arm 집합·판정 규칙을 바꾸지 않고 전송 경로만 바꾼다. Task 5 산출물과
+BF16 Top-1 696/800 관찰 이후, 어떤 양자화 arm의 Top-1·PPL·처리량도 관찰하기 전에 이루어졌다.
+근거와 실측은
+[`mix-stq-v27-amendment-3-host-direct-preservation.md`](mix-stq-v27-amendment-3-host-direct-preservation.md)에 있다.

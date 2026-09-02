@@ -133,7 +133,7 @@ def test_build_plan_exact_phases_pins_paths_and_no_side_effects(tmp_path: Path) 
     plan = run_plan.build_plan(workspace, RUN_COMMIT)
 
     assert tuple(plan) == run_plan.PHASES
-    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 20]
+    assert [len(plan[phase]) for phase in plan] == [32, 1, 2, 2, 4, 5, 6, 4, 14]
     assert not workspace.exists()
     serialized = json.dumps(plan)
     _assert_safe(serialized)
@@ -341,56 +341,43 @@ def test_upload_phase_runs_after_split_and_publishes_the_preregistered_prefix(
     )
 
 
-def test_upload_phase_verifies_every_object_with_an_unauthenticated_re_download(
-    tmp_path: Path,
-) -> None:
+def test_upload_phase_verifies_every_object_one_shard_at_a_time(tmp_path: Path) -> None:
     plan = run_plan.build_plan(tmp_path / "workspace", RUN_COMMIT)
     artifact_root = tmp_path / "workspace" / "mix-stq" / "artifacts" / "qwen38-gguf-v27"
     hf = str(artifact_root / "venv" / "bin" / "hf")
     verify_root = artifact_root / "public-verify"
 
     upload = plan["upload"]
-    downloads = [command for command in upload if "download" in command]
-    verifications = [
-        command for command in upload if run_plan.PUBLIC_VERIFY_RUNNER in command
-    ]
-    assert len(downloads) == len(verifications) == len(run_plan.TIERS) + 2
-
-    for command in downloads:
-        assert command[1] == "-c"
-        assert command[2] == run_plan.UNAUTHENTICATED_RUNNER
-        assert command[3] == str(artifact_root / "public-verify" / "unauthenticated-home")
-        assert command[4] == hf
-        assert command[5] == "download"
-        assert command[6] == run_plan.HF_DATASET_REPO
-        assert command[command.index("--repo-type") + 1] == "dataset"
-        assert command[command.index("--local-dir") + 1] == str(verify_root)
-        include = command[command.index("--include") + 1 :]
-        assert len(include) == 1
-        assert include[0].startswith(run_plan.HF_UPLOAD_PREFIX + "/")
+    verifications = [command for command in upload if run_plan.PUBLIC_VERIFY_RUNNER in command]
+    assert len(verifications) == len(run_plan.TIERS) + 2
+    # The whole-prefix download is gone: the verifier fetches one file at a time.
+    assert not [command for command in upload if "download" in command]
 
     for command in verifications:
-        assert command[-1].startswith(str(verify_root / run_plan.HF_UPLOAD_PREFIX))
-        assert command[-2].startswith(str(artifact_root))
+        assert command[1:3] == ["-c", run_plan.PUBLIC_VERIFY_RUNNER]
+        assert command[3] == str(artifact_root / "venv" / "bin" / "python")
+        assert command[4] == run_plan.UNAUTHENTICATED_RUNNER
+        assert command[5] == str(verify_root / "unauthenticated-home")
+        assert command[6] == hf
+        assert command[7] == run_plan.HF_DATASET_REPO
+        assert command[8].startswith(run_plan.HF_UPLOAD_PREFIX + "/")
+        assert command[9].startswith(str(artifact_root))
+        assert command[10] == str(verify_root)
+        assert len(command) == 11
 
     for tier in run_plan.TIERS:
         upload_index = next(
-            index for index, command in enumerate(upload) if command[4:5] == [
-                f"{run_plan.HF_UPLOAD_PREFIX}/{tier}"
-            ]
-        )
-        download_index = next(
             index
             for index, command in enumerate(upload)
-            if "download" in command and command[-1] == f"{run_plan.HF_UPLOAD_PREFIX}/{tier}/*"
+            if command[4:5] == [f"{run_plan.HF_UPLOAD_PREFIX}/{tier}"]
         )
         verify_index = next(
             index
             for index, command in enumerate(upload)
             if run_plan.PUBLIC_VERIFY_RUNNER in command
-            and command[-1] == str(verify_root / run_plan.HF_UPLOAD_PREFIX / tier)
+            and command[8] == f"{run_plan.HF_UPLOAD_PREFIX}/{tier}"
         )
-        assert upload_index < download_index < verify_index
+        assert upload_index < verify_index
 
 
 def test_upload_phase_argv_carries_no_credential() -> None:
@@ -499,50 +486,105 @@ def test_upload_phase_proves_the_dataset_repository_is_public(tmp_path: Path) ->
     assert "not public" in refused.stderr
 
 
-def test_public_verify_runner_matches_hashes_and_releases_the_downloaded_copy(
+def _fake_hub(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """A fake `hf download` that serves one path-in-repo per call and logs concurrency."""
+
+    remote = tmp_path / "remote"
+    log = tmp_path / "download-log.txt"
+    executable = tmp_path / "fake-hf"
+    executable.write_text(
+        f"#!{sys.executable}\n"
+        "import os,shutil,sys\n"
+        "from pathlib import Path\n"
+        "argv = sys.argv[1:]\n"
+        "assert argv[0] == 'download', argv\n"
+        "path_in_repo = argv[2]\n"
+        "local_dir = Path(argv[argv.index('--local-dir') + 1])\n"
+        "assert argv[argv.index('--repo-type') + 1] == 'dataset'\n"
+        "assert not [name for name in os.environ if 'TOKEN' in name.upper()\n"
+        "            and name != 'HF_HUB_DISABLE_IMPLICIT_TOKEN'], 'token variable survived'\n"
+        f"source = Path({str(remote)!r}) / path_in_repo\n"
+        "if not source.is_file():\n"
+        "    raise SystemExit('fake hub has no ' + path_in_repo)\n"
+        "target = local_dir / path_in_repo\n"
+        "target.parent.mkdir(parents=True, exist_ok=True)\n"
+        "shutil.copyfile(source, target)\n"
+        "(local_dir / '.cache' / 'huggingface').mkdir(parents=True, exist_ok=True)\n"
+        "(local_dir / '.cache' / 'huggingface' / 'download-metadata').write_text('x')\n"
+        "resident = [p for p in local_dir.rglob('*') if p.is_file() and '.cache' not in p.parts]\n"
+        f"Path({str(log)!r}).open('a').write(str(len(resident)) + ' ' + path_in_repo + chr(10))\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+    return executable, remote, log
+
+
+def _run_public_verify(
+    tmp_path: Path, hub: Path, source: Path, verify: Path, prefix: str = "paid-run/x/IQ3_XXS"
+):
+    return subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            run_plan.PUBLIC_VERIFY_RUNNER,
+            sys.executable,
+            run_plan.UNAUTHENTICATED_RUNNER,
+            str(tmp_path / "sandbox"),
+            str(hub),
+            "topabaem/mix-stq-artifacts",
+            prefix,
+            str(source),
+            str(verify),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+        env={"PATH": os.defpath, "HOME": str(tmp_path / "fake-home")},
+    )
+
+
+def test_public_verify_runner_holds_at_most_one_shard_and_releases_every_copy(
     tmp_path: Path,
 ) -> None:
+    hub, remote, log = _fake_hub(tmp_path)
+    prefix = "paid-run/qwen38-gguf-frontier-v27/IQ3_XXS"
     source = tmp_path / "source"
     (source / "nested").mkdir(parents=True)
-    (source / "shard-00001-of-00002.gguf").write_bytes(b"first shard payload")
-    (source / "nested" / "shard-00002-of-00002.gguf").write_bytes(b"second shard payload")
-    mirror = tmp_path / "mirror"
-    (mirror / "nested").mkdir(parents=True)
-    (mirror / "shard-00001-of-00002.gguf").write_bytes(b"first shard payload")
-    (mirror / "nested" / "shard-00002-of-00002.gguf").write_bytes(b"second shard payload")
+    shards = {
+        "qwen38-27b-iq3_xxs-00001-of-00002.gguf": b"first shard payload",
+        "nested/qwen38-27b-iq3_xxs-00002-of-00002.gguf": b"second shard payload",
+    }
+    for name, payload in shards.items():
+        (source / name).write_bytes(payload)
+        published = remote / prefix / name
+        published.parent.mkdir(parents=True, exist_ok=True)
+        published.write_bytes(payload)
+    verify = tmp_path / "public-verify"
 
-    def verify() -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [sys.executable, "-c", run_plan.PUBLIC_VERIFY_RUNNER, str(source), str(mirror)],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-
-    accepted = verify()
+    accepted = _run_public_verify(tmp_path, hub, source, verify, prefix)
     assert accepted.returncode == 0, accepted.stderr
-    assert not mirror.exists()
-    assert (source / "shard-00001-of-00002.gguf").is_file()
+    # Every downloaded copy is released, including the CLI's .cache skeleton.
+    assert not verify.exists()
+    assert all((source / name).is_file() for name in shards)
+    residency = [int(line.split()[0]) for line in log.read_text().splitlines()]
+    assert residency == [1, 1]
 
-    (mirror / "nested").mkdir(parents=True)
-    (mirror / "shard-00001-of-00002.gguf").write_bytes(b"first shard payload")
-    (mirror / "nested" / "shard-00002-of-00002.gguf").write_bytes(b"tampered payload")
-    corrupted = verify()
+    tampered = remote / prefix / "nested" / "qwen38-27b-iq3_xxs-00002-of-00002.gguf"
+    tampered.write_bytes(b"tampered payload")
+    corrupted = _run_public_verify(tmp_path, hub, source, verify, prefix)
     assert corrupted.returncode != 0
     assert "mismatch" in corrupted.stderr
 
-    missing_mirror = tmp_path / "absent"
-    missing_mirror.mkdir()
-    incomplete = subprocess.run(
-        [sys.executable, "-c", run_plan.PUBLIC_VERIFY_RUNNER, str(source), str(missing_mirror)],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    assert incomplete.returncode != 0
-    assert "missing" in incomplete.stderr
+    tampered.unlink()
+    missing = _run_public_verify(tmp_path, hub, source, verify, prefix)
+    assert missing.returncode != 0
+
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    nothing = _run_public_verify(tmp_path, hub, empty, verify, prefix)
+    assert nothing.returncode != 0
+    assert "nothing to verify" in nothing.stderr
 
 
 def test_convert_emits_the_pinned_vision_projector_after_the_text_model(tmp_path: Path) -> None:

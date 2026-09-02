@@ -435,9 +435,11 @@ Split quantized files to at most 8 GiB, then run the planner's `upload` phase. P
 rented host uploads directly to `topabaem/mix-stq-artifacts` under
 `paid-run/qwen38-gguf-frontier-v27/<ARM>/`, plus `projector/` and `evidence/`, using the CLI the
 user logged in by hand; no token appears in argv, logs or planner output. Each upload is followed
-by an unauthenticated public re-download in a process with the Hub and token environment stripped,
-and a sha256 comparison that releases each verified copy immediately, so the verification never
-needs more than one shard of extra disk. Keep every remote monolith until all four arms have a
+by an anonymous public re-download and sha256 comparison, one file at a time: the verifier fetches
+a single path-in-repo with the environment stripped, implicit tokens disabled, and HOME/HF_HOME
+pointed at an empty sandbox, compares, releases that copy, and only then moves to the next shard,
+so the verification never needs more than one shard of extra disk. Before the first upload the
+phase reads the dataset repository metadata anonymously and stops unless it reports private=false. Keep every remote monolith until all four arms have a
 valid public preservation marker. The BF16 monolith is not uploaded; its revision and SHA are the
 preservation record.
 

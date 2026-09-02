@@ -179,10 +179,12 @@ PUBLIC_REPO_CHECK_RUNNER = (
     "isinstance(metadata.get('id'), str) or sys.exit('repository metadata is malformed')\n"
     "print('public dataset repository confirmed: ' + metadata['id'])\n"
 )
-# Compare every uploaded object against its public copy and release the verified copy at once, so
-# the extra disk the verification needs never exceeds one shard.
+# Verify each uploaded object against its public copy one file at a time: fetch a single
+# path-in-repo anonymously, compare sha256, release it, then move to the next. The extra disk the
+# verification needs therefore never exceeds one shard, and the CLI's local .cache skeleton is
+# removed with the verification tree.
 PUBLIC_VERIFY_RUNNER = (
-    "import hashlib,shutil,sys\n"
+    "import hashlib,shutil,subprocess,sys\n"
     "from pathlib import Path\n"
     "def digest(path):\n"
     "    value = hashlib.sha256()\n"
@@ -190,17 +192,23 @@ PUBLIC_VERIFY_RUNNER = (
     "        for chunk in iter(lambda: stream.read(1048576), b''):\n"
     "            value.update(chunk)\n"
     "    return value.hexdigest()\n"
-    "source = Path(sys.argv[1])\n"
-    "mirror = Path(sys.argv[2])\n"
+    "python, runner, sandbox, cli, repo, prefix, source, verify = sys.argv[1:9]\n"
+    "source = Path(source)\n"
+    "verify = Path(verify)\n"
     "files = sorted(path for path in source.rglob('*') if path.is_file())\n"
     "files or sys.exit('nothing to verify under ' + str(source))\n"
     "for path in files:\n"
-    "    public = mirror / path.relative_to(source)\n"
-    "    public.is_file() or sys.exit('public re-download is missing ' + str(public))\n"
-    "    digest(path) == digest(public) or sys.exit('public sha256 mismatch for ' + str(public))\n"
-    "    print('verified ' + str(path.relative_to(source)))\n"
+    "    remote = prefix + '/' + path.relative_to(source).as_posix()\n"
+    "    completed = subprocess.run([python, '-c', runner, sandbox, cli, 'download', repo,\n"
+    "                                remote, '--repo-type', 'dataset', '--local-dir', str(verify)],\n"
+    "                               check=False)\n"
+    "    completed.returncode == 0 or sys.exit('public re-download failed for ' + remote)\n"
+    "    public = verify / remote\n"
+    "    public.is_file() or sys.exit('public re-download is missing ' + remote)\n"
+    "    digest(path) == digest(public) or sys.exit('public sha256 mismatch for ' + remote)\n"
+    "    print('verified ' + remote)\n"
     "    public.unlink()\n"
-    "shutil.rmtree(mirror)\n"
+    "shutil.rmtree(verify, ignore_errors=True)\n"
     "print('verified ' + str(len(files)) + ' files against the public copy')\n"
 )
 SENSITIVE_TEXT_MARKERS = (
@@ -572,24 +580,15 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
                 [
                     python,
                     "-c",
+                    PUBLIC_VERIFY_RUNNER,
+                    python,
                     UNAUTHENTICATED_RUNNER,
                     paths["unauthenticated_home"],
                     paths["hf"],
-                    "download",
                     HF_DATASET_REPO,
-                    "--repo-type",
-                    "dataset",
-                    "--local-dir",
-                    paths["public_verify"],
-                    "--include",
-                    f"{remote}/*",
-                ],
-                [
-                    python,
-                    "-c",
-                    PUBLIC_VERIFY_RUNNER,
+                    remote,
                     local,
-                    paths["public_verify"] / HF_UPLOAD_PREFIX / name,
+                    paths["public_verify"],
                 ],
             ]
         )

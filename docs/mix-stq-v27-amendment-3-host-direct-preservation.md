@@ -143,3 +143,30 @@ ssh -p <PORT> root@<HOST> '/workspace/mix-stq/artifacts/qwen38-gguf-v27/venv/bin
 
 - 실행 종료 시 사용자가 Hugging Face 설정에서 해당 token을 폐기하고, 폐기 사실을 ledger에
   기록한다.
+
+---
+
+## 부록: 2026-09-02 정정 1 — 검증의 익명성과 shard 단위 처리
+
+독립 리뷰에서 §2.4의 두 가지 서술이 실제 구현보다 앞서 있었음이 확인되어 정정한다. 이 절은
+개정 3의 요구를 **강화**하며, 사전등록 본문의 요구를 완화하지 않는다.
+
+**정정 1-a: "환경변수 제거"만으로는 익명 요청이 되지 않는다.** `huggingface_hub`는 환경변수가
+없으면 token **파일**(`$HF_HOME/token`, 기본값 `$HOME/.cache/huggingface/token`)로 넘어간다.
+그 파일은 §4에서 사용자가 만드는 바로 그 파일이므로, 환경변수만 지운 재다운로드는 여전히
+쓰기 권한자로 인증되어 "공개적으로 읽을 수 있다"를 전혀 증명하지 못한다. 실제 검증은 환경변수
+제거에 더해 `HF_HUB_DISABLE_IMPLICIT_TOKEN=1`을 설정하고 `HOME`, `HF_HOME`, `XDG_*`를 비어 있는
+새 sandbox 디렉터리로 돌린 뒤 프로세스를 exec한다. 이는 test로 강제한다
+(`test_unauthenticated_runner_hides_the_environment_and_the_stored_token_file`).
+
+**정정 1-b: 저장소 공개 여부를 실제로 확인한다.** 업로드 이전에 인증 없이
+`https://huggingface.co/api/datasets/topabaem/mix-stq-artifacts`를 읽어 `private == false`임을
+확인하고, 실패하면 업로드를 시작하지 않는다.
+
+**정정 1-c: shard 단위 검증.** 이전 문구는 "shard 단위로 대조 직후 삭제"라고 적었으나 구현은
+arm prefix 전체를 한 번에 받은 뒤 삭제했으므로, 추가 disk 최대 점유는 shard 하나가 아니라 arm
+하나(최대 19.2 GB)였다. 구현을 문구에 맞춘다. 검증기는 파일 하나의 path-in-repo만 익명으로
+내려받아 sha256을 대조하고 즉시 삭제한 뒤 다음 파일로 넘어가며, 마지막에 검증 트리와 CLI가
+만든 `.cache` 잔여물을 제거한다. 따라서 §2.4의 "추가 disk 최대 점유는 shard 하나(≤ 8 GiB)"는
+이제 참이다. 동시 잔존 파일 수가 1을 넘지 않는다는 것도 test로 강제한다
+(`test_public_verify_runner_holds_at_most_one_shard_and_releases_every_copy`).

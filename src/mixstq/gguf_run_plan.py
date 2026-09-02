@@ -376,7 +376,6 @@ def build_plan(workspace: Path, run_commit: str) -> dict[str, list[list[str]]]:
             "Reply with one nonempty word.",
             "--no-display-prompt",
             "--single-turn",
-            "--no-conversation",
             "--output-file",
             paths[f"smoke_{name}"],
             "--log-disable",

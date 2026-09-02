@@ -190,7 +190,8 @@ def test_plan_conversion_imatrix_quant_smoke_and_split_contracts(tmp_path: Path)
         assert command[command.index("--temperature") + 1] == "0"
         assert command[command.index("--n-predict") + 1] == "16"
         assert "--no-display-prompt" in command
-        assert "--no-conversation" in command
+        assert "--single-turn" in command
+        assert "--no-conversation" not in command
         assert "--output-file" in command
 
     assert [command[-2] for command in plan["split"]] == [

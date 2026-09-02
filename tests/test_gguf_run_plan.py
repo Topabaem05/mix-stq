@@ -733,32 +733,57 @@ def test_bootstrap_builds_and_probes_every_required_executable(tmp_path: Path) -
         ]
         assert len(probe) == 1
         assert probe[0][1:3] == ["-c", run_plan.HELP_PROBE_RUNNER]
+        expected = (
+            "strict" if executable in run_plan.LEDGER_VERIFIED_EXECUTABLES else "lenient"
+        )
+        assert probe[0][3] == expected
         assert [binary, "--help"] not in plan["bootstrap"]
 
+    # Run 1 observed the help surface of exactly these five; the other three were never built.
+    assert run_plan.LEDGER_VERIFIED_EXECUTABLES == (
+        "llama-imatrix",
+        "llama-quantize",
+        "llama-cli",
+        "llama-tokenize",
+        "llama-gguf-split",
+    )
+    assert set(run_plan.REQUIRED_EXECUTABLES) - set(run_plan.LEDGER_VERIFIED_EXECUTABLES) == {
+        "llama-server",
+        "llama-perplexity",
+        "llama-bench",
+    }
 
-def test_help_probe_runner_accepts_a_pinned_usage_exit_code_of_one(tmp_path: Path) -> None:
+
+def _run_help_probe(mode: str, executable: Path):
+    return subprocess.run(
+        [sys.executable, "-c", run_plan.HELP_PROBE_RUNNER, mode, str(executable)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+def test_help_probe_accepts_the_pinned_usage_exit_code_and_only_demands_text_when_observed(
+    tmp_path: Path,
+) -> None:
     quantize_like = _fake_executable(
         tmp_path,
         "import sys\nprint('usage: llama-quantize [options] model-f32.gguf')\nraise SystemExit(1)",
     )
-    completed = subprocess.run(
-        [sys.executable, "-c", run_plan.HELP_PROBE_RUNNER, str(quantize_like)],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    assert completed.returncode == 0
+    assert _run_help_probe("strict", quantize_like).returncode == 0
 
+    # The three Task 6 binaries were never built in run 1, so their help surface is unobserved:
+    # missing usage text is a warning there, and a failure only where the ledger recorded it.
     silent = _fake_executable(tmp_path, "raise SystemExit(1)")
-    rejected = subprocess.run(
-        [sys.executable, "-c", run_plan.HELP_PROBE_RUNNER, str(silent)],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    assert rejected.returncode != 0
+    assert _run_help_probe("strict", silent).returncode != 0
+    lenient = _run_help_probe("lenient", silent)
+    assert lenient.returncode == 0
+    assert "warning" in lenient.stdout.lower()
+
+    crashed = _fake_executable(tmp_path, "import sys\nprint('usage: x')\nraise SystemExit(2)")
+    for mode in ("strict", "lenient"):
+        assert _run_help_probe(mode, crashed).returncode != 0
 
 
 @pytest.mark.parametrize(

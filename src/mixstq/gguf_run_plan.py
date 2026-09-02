@@ -51,6 +51,16 @@ REQUIRED_EXECUTABLES = (
     "llama-tokenize",
     "llama-gguf-split",
 )
+# Run 1 built and probed exactly these five and recorded their help surface: four exit 0 and
+# llama-quantize exits 1 after printing usage. The three Task 6 binaries were never built, so
+# nothing observed says they print "usage"; demanding it there would be an unvalidated gate.
+LEDGER_VERIFIED_EXECUTABLES = (
+    "llama-imatrix",
+    "llama-quantize",
+    "llama-cli",
+    "llama-tokenize",
+    "llama-gguf-split",
+)
 MODEL_SNAPSHOT_FILES = (
     "config.json",
     "README.md",
@@ -116,15 +126,19 @@ CONVERTER_RUNNER = (
     "runpy.run_path(str(matches[0]),run_name='__main__')"
 )
 # llama-quantize prints its usage and then exits 1 at the pinned llama.cpp commit, so a bare
-# `--help` probe fails bootstrap for a binary that is present and self-documenting. The probe
-# requires usage text and accepts the two documented usage exit codes.
+# `--help` probe fails bootstrap for a binary that is present and self-documenting. Every probe
+# requires one of the two documented usage exit codes; only a probe over a binary whose help
+# surface the ledger actually recorded also requires the usage text itself.
 HELP_PROBE_RUNNER = (
     "import subprocess,sys;"
-    "completed=subprocess.run([sys.argv[1],'--help'],stdin=subprocess.DEVNULL,"
+    "mode,executable=sys.argv[1],sys.argv[2];"
+    "mode in ('strict','lenient') or sys.exit('unknown help probe mode');"
+    "completed=subprocess.run([executable,'--help'],stdin=subprocess.DEVNULL,"
     "stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,errors='replace',timeout=120);"
     "text=completed.stdout;"
-    "'usage' in text.lower() or sys.exit('pinned executable printed no usage text');"
-    "completed.returncode in (0,1) or sys.exit('pinned executable help probe failed')"
+    "completed.returncode in (0,1) or sys.exit('pinned executable help probe failed');"
+    "'usage' in text.lower() or mode == 'lenient' or sys.exit('printed no usage text');"
+    "'usage' in text.lower() or print('warning: ' + executable + ' printed no usage text')"
 )
 # Gather the small artifacts into one evidence directory. A required source must exist and hold at
 # least one file, so an upload cannot silently publish an empty or missing result set; only the
@@ -384,7 +398,8 @@ def build_plan(
     ]
     for executable in REQUIRED_EXECUTABLES:
         bootstrap.append(["test", "-x", bin_dir / executable])
-        bootstrap.append([python, "-c", HELP_PROBE_RUNNER, bin_dir / executable])
+        mode = "strict" if executable in LEDGER_VERIFIED_EXECUTABLES else "lenient"
+        bootstrap.append([python, "-c", HELP_PROBE_RUNNER, mode, bin_dir / executable])
     bootstrap.extend(
         [
             [paths["hf"], "--help"],
